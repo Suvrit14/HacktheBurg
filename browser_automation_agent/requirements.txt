@@ -1,0 +1,10 @@
+langgraph
+langchain-aws
+langchain-core
+boto3
+playwright
+fastapi
+uvicorn[standard]
+python-dotenv
+python-multipart
+pytest

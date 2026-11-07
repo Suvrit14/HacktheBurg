@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MyoPilot</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#111827; --muted:#5b6472; --line:#e3e6eb;
+          --accent:#ff6a00; --accent-ink:#fff; --ok:#0a7d32; --warn:#b42318; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f1115; --card:#181b21; --ink:#f2f4f7; --muted:#9aa3b2;
+          --line:#2a2f38; --ok:#3fb950; --warn:#f97066; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 system-ui,-apple-system,Segoe UI,sans-serif; }
+  .wrap { display:grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap:20px; padding:20px; height:100vh; }
+  @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; height:auto; } }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px; overflow:auto; }
+  .brand { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .brand b { font-size:20px; letter-spacing:.2px; } .brand b span { color:var(--accent); }
+  .mode { font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); }
+  h1 { font-size:28px; line-height:1.2; margin:6px 0 18px; }
+  .answer { font-size:20px; background:var(--bg); border-left:5px solid var(--ok); padding:14px 16px; border-radius:8px; margin-bottom:18px; white-space:pre-wrap; }
+  .items { display:flex; flex-direction:column; gap:10px; }
+  .item { font-size:22px; padding:16px 18px; border:2px solid var(--line); border-radius:12px; cursor:pointer; }
+  .item.on { border-color:var(--accent); background:var(--accent); color:var(--accent-ink); font-weight:650; transform:scale(1.01); }
+  .confirm .item:first-child.on { background:var(--ok); border-color:var(--ok); }
+  .working { display:flex; align-items:center; gap:14px; font-size:20px; color:var(--muted); }
+  .spin { width:26px; height:26px; border:4px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:s 0.9s linear infinite; }
+  @keyframes s { to { transform:rotate(360deg); } }
+  .pad { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:22px; }
+  .pad button { font:600 14px system-ui; padding:12px 6px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); cursor:pointer; }
+  .pad button.flash { background:var(--accent); color:#fff; }
+  .voice { margin-top:12px; display:flex; gap:8px; }
+  .voice input { flex:1; font-size:18px; padding:12px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); }
+  .voice button { font:600 16px system-ui; padding:12px 16px; border-radius:10px; border:0; background:var(--accent); color:#fff; cursor:pointer; }
+  .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; }
+  .metric { background:var(--bg); border-radius:10px; padding:10px; } .metric b { display:block; font-size:20px; }
+  .metric small { color:var(--muted); font-size:12px; }
+  .log { font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .ev { padding:6px 0; border-bottom:1px solid var(--line); display:grid; grid-template-columns:52px 96px 1fr; gap:8px; }
+  .ev .t { color:var(--muted); } .ev .k { font-weight:600; } .ev.bad .k { color:var(--warn); } .ev.llm .k { color:#6b5bd2; }
+  .hint { color:var(--muted); font-size:13px; margin-top:10px; }
+  .model { font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="panel" aria-live="polite">
+    <div class="brand"><b>Myo<span>Pilot</span></b><span class="mode" id="mode">connecting…</span></div>
+    <div id="main"></div>
+    <div class="pad" aria-label="Gesture controls">
+      <button data-i="PREV">◀ PREV</button><button data-i="NEXT">NEXT ▶</button>
+      <button data-i="SELECT">● SELECT</button><button data-i="BACK">↩ BACK</button>
+    </div>
+    <p class="hint">Keyboard stand-in for gestures: ←/↑ PREV · →/↓ NEXT · Enter SELECT · Esc BACK · V voice</p>
+  </section>
+  <section class="panel">
+    <div class="metrics" id="metrics"></div>
+    <div class="model" id="model"></div>
+    <div class="log" id="log"></div>
+  </section>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+let ws, view = {};
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function connect() {
+  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onmessage = (m) => { const d = JSON.parse(m.data); d.kind === 'view' ? render(d) : addEvent(d); };
+  ws.onclose = () => { $('mode').textContent = 'disconnected – retrying'; setTimeout(connect, 1000); };
+}
+function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+function intent(i) {
+  send({intent: i});
+  const b = document.querySelector(`.pad button[data-i="${i}"]`);
+  if (b) { b.classList.add('flash'); setTimeout(() => b.classList.remove('flash'), 180); }
+}
+
+function render(v) {
+  view = v;
+  $('mode').textContent = v.mode || '';
+  const m = v.metrics || {};
+  $('metrics').innerHTML = [['Browser steps', m.browser_steps], ['LLM calls', m.llm_calls],
+    ['Tokens', (m.tokens ?? 0).toLocaleString()], ['Time', (m.elapsed_s ?? 0) + 's']]
+    .map(([k, x]) => `<div class="metric"><b>${esc(x ?? 0)}</b><small>${k}</small></div>`).join('');
+  $('model').textContent = m.model ? `Model: ${m.model}` : '';
+  let h = `<h1>${esc(v.title)}</h1>`;
+  if (v.answer) h += `<div class="answer">${esc(v.answer)}</div>`;
+  if (v.mode === 'working') h += `<div class="working"><div class="spin"></div><span>${esc(v.caption || 'Working…')}</span></div>`;
+  if (v.items && v.items.length) {
+    h += `<div class="items ${v.mode === 'confirm' ? 'confirm' : ''}">` + v.items.map((it, i) =>
+      `<div class="item ${i === v.cursor ? 'on' : ''}">${esc(it)}</div>`).join('') + `</div>`;
+  }
+  if (v.mode === 'text') {
+    h += `<div class="voice"><input id="txt" placeholder="Press V to dictate, or type (dev)…"><button id="mic">🎤 Speak</button></div>`;
+  }
+  $('main').innerHTML = h;
+  if (v.mode === 'text') {
+    $('mic').onclick = dictate;
+    $('txt').onkeydown = (e) => { if (e.key === 'Enter' && e.target.value.trim()) { send({text: e.target.value}); e.stopPropagation(); } };
+  }
+}
+
+function dictate() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert('Speech recognition is not available in this browser – open the panel in Chrome.'); return; }
+  const r = new SR(); r.lang = 'en-GB'; r.interimResults = true;
+  const box = $('txt'); box.placeholder = 'Listening…';
+  r.onresult = (e) => { const t = Array.from(e.results).map((x) => x[0].transcript).join(' '); box.value = t;
+    if (e.results[e.results.length - 1].isFinal) send({text: t}); };
+  r.onerror = () => { box.placeholder = 'Could not hear you – try again (V)'; };
+  r.start();
+}
+
+function addEvent(e) {
+  const label = {agent_step: e.tool, llm_call: e.purpose === 'options' ? 'options' : 'think', choice: 'choice',
+    ask: 'ask', answer: 'answer', result: 'result', safety_block: 'BLOCKED', intent: 'gesture', task_start: 'task'}[e.type] || e.type;
+  const detail = e.type === 'agent_step' ? (e.explain || '') + (e.ok === false ? ` – ${e.error}` : '')
+    : e.type === 'llm_call' ? `${e.input_tokens ?? 0}→${e.output_tokens ?? 0} tok · ${e.latency_s}s`
+    : e.type === 'intent' ? `${e.intent} (${e.source})`
+    : e.question || e.label || e.reply || e.answer || e.reason || '';
+  const row = document.createElement('div');
+  row.className = `ev ${e.ok === false || e.type === 'safety_block' ? 'bad' : ''} ${e.type === 'llm_call' ? 'llm' : ''}`;
+  row.innerHTML = `<span class="t">${(e.t ?? 0).toFixed(1)}s</span><span class="k">${esc(label)}</span><span>${esc(detail)}</span>`;
+  $('log').prepend(row);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  const map = {ArrowRight: 'NEXT', ArrowDown: 'NEXT', ArrowLeft: 'PREV', ArrowUp: 'PREV', Enter: 'SELECT', Escape: 'BACK'};
+  if (map[e.key]) { e.preventDefault(); intent(map[e.key]); }
+  else if ((e.key === 'v' || e.key === 'V') && view.mode === 'text') { e.preventDefault(); dictate(); }
+});
+document.querySelectorAll('.pad button').forEach((b) => b.onclick = () => intent(b.dataset.i));
+connect();
+</script>
+</body>
+</html>
