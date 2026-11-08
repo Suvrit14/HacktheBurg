@@ -43,6 +43,11 @@ def load_raw_db5(subject_number, exercise_number=2, data_dir="."):
     # Looks for <data_dir>/s<subject>/S<subject>_E<exercise>_A1.mat
     # Returns: emg (num_samples, 16), restimulus (num_samples,), rerepetition (num_samples,), sampling_freq
     path = os.path.join(data_dir, f"s{subject_number}", f"S{subject_number}_E{exercise_number}_A1.mat")
+    if not os.path.exists(path) and data_dir == ".":
+        # Some of us keep the recordings in data/s1 ... data/s10 instead of s1 ... s10
+        in_data = os.path.join("data", f"s{subject_number}", f"S{subject_number}_E{exercise_number}_A1.mat")
+        if os.path.exists(in_data):
+            path = in_data
     if not os.path.exists(path):
         raise FileNotFoundError(f"DB5 file not found: {path} (set data_dir to the folder that contains s1 ... s10)")
     mat = loadmat(path)

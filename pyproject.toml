@@ -8,15 +8,24 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "boto3>=1.43.126",
+    "fastapi>=0.162.2",
     "ipykernel>=7.4.0",
     "joblib>=1.6.0",
+    "langchain-aws>=1.9.2",
+    "langchain-core>=1.7.6",
+    "langgraph>=1.2.20",
     "matplotlib>=3.11.2",
     "mediapipe>=1.2.2",
     "numpy>=2.5.4",
     "opencv-python>=5.0.0.93",
     "pandas>=3.1.1",
+    "playwright>=1.64.1",
+    "python-dotenv>=1.2.4",
+    "python-multipart>=0.0.33",
     "scikit-learn==1.7.2",
     "scipy>=1.18.1",
+    "uvicorn[standard]>=0.54.0",
 ]
 
 [project.scripts]
@@ -25,3 +34,13 @@ hacktheburgh = "hacktheburgh:main"
 [build-system]
 requires = ["uv_build>=0.13.7,<0.14.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+# The browser automation package (myopilot) lives in browser_automation_agent/
+pythonpath = ["browser_automation_agent"]
+testpaths = ["browser_automation_agent/tests"]

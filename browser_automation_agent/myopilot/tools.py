@@ -55,7 +55,7 @@ def ask_choice(question: str, options: list[str]) -> str:
     """Ask the user to pick one of 2-4 short options using their gesture controls.
     Use whenever the answer is not in the profile but can be offered as choices
     (e.g. which pharmacy, which time slot, yes/no). Returns the chosen option, or
-    'BACK' if the user cancelled."""
+    'back' if the user cancelled."""
     raise NotImplementedError
 
 

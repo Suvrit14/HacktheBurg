@@ -1,0 +1,15 @@
+// GOV.UK Frontend without GOV.UK branding
+// https://frontend.design-system.service.gov.uk/using-govuk-frontend-without-govuk-branding/
+// This is not a GOV.UK service, so it must not use the GDS Transport font or the
+// GOV.UK brand blue. Both are redefined in one `with` so Frontend is included once.
+@use "pkg:govuk-frontend" as * with (
+  $govuk-font-family: ("Helvetica Neue", Helvetica, Arial, sans-serif),
+  $govuk-functional-colours: (
+    brand: #4c2c92
+  )
+);
+
+// Our own footer (the GOV.UK footer component always shows the crown).
+.app-footer__meta-text {
+  margin-top: govuk-spacing(3);
+}

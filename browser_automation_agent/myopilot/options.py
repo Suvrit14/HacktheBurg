@@ -1,4 +1,4 @@
-"""Switch-access menus: what the user can pick with NEXT/PREV/SELECT.
+"""Switch-access menus: what the user can pick with scroll_down / scroll_up / tab / click.
 
 * On the home screen: a fixed list of everyday tasks (the research-backed set).
 * On any other page: the LLM proposes 3-4 next actions for that page.

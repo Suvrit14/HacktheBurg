@@ -1,0 +1,15 @@
+{% extends "question.njk" %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
+{% block fields %}
+  {# GOV.UK "Names" pattern: one full name field #}
+  {{ govukInput({
+    id: "full-name",
+    name: "fullName",
+    value: values.fullName,
+    autocomplete: "name",
+    spellcheck: false,
+    label: { text: pageTitle, isPageHeading: true, classes: "govuk-label--l" },
+    errorMessage: { text: errors["full-name"] } if errors["full-name"] else false
+  }) }}
+{% endblock %}

@@ -3,7 +3,7 @@
 This is the contract the dashboard (and later the classifier side) reads.
 Event types:
   run_start, run_end            run boundaries and totals
-  intent                        a NEXT/PREV/SELECT/BACK command (keyboard now, EMG later)
+  intent                        a scroll_down / scroll_up / tab / click / back command (keyboard or EMG)
   options_proposed, choice      switch-access menus and what the user picked
   llm_call                      one model call: model, latency, input/output/cache tokens
   agent_step                    one browser tool call: tool, args, url, ok/error, latency

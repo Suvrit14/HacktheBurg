@@ -1,6 +1,0 @@
-# Browser automation agent (MyoPilot) - local-only files
-.venv/
-.env
-runs/
-__pycache__/
-.pytest_cache/

@@ -220,3 +220,10 @@ __marimo__/
 .streamlit/secrets.toml
 
 data/
+
+# MyoPilot browser automation: run logs and screenshots
+browser_automation_agent/runs/
+
+# GOV.UK form demo site (Node)
+govuk_form_site/node_modules/
+govuk_form_site/public/app.css

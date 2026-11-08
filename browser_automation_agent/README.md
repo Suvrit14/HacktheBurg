@@ -1,38 +1,36 @@
 # MyoPilot
 
-An AI browser agent for people with limited hand movement. Four gesture commands (NEXT, PREV, SELECT, BACK) drive an agent that completes everyday tasks on **live websites** such as NHS and GOV.UK. Muscle (EMG) gestures come from the classifier; until that's ready, the keyboard stands in.
+An AI browser agent for people with limited hand movement. Five gesture commands (scroll_down, scroll_up, tab, click, back), the same ones Suvrit's classifier emits, drive an agent that completes everyday tasks on **live websites** such as NHS and GOV.UK. Muscle (EMG) gestures come from the classifier (`uv run main.py --emg`); the keyboard works as a stand-in.
 
 Built with **LangGraph** and **AWS Bedrock**, with **Playwright** driving Google Chrome.
 
-This folder is the browser automation part of the HacktheBurgh repo. The EMG classifier lives at the repo root (`emg_data/`). All commands below run **from inside this folder**.
+This folder is the browser automation part of the HacktheBurgh repo. The EMG classifier lives at the repo root (`emg_data/`). The whole repo is **one uv project**: one `pyproject.toml`, one `.venv`, one `.env` and one `.gitignore`, all at the repo root. All commands below run **from the repo root**.
 
 ## Setup
 ```bash
-cd browser_automation_agent
-uv venv --python 3.12 .venv
-uv pip install --python .venv -r requirements.txt
-.venv/bin/python -m playwright install chromium
+uv sync
+uv run playwright install chromium
 cp .env.example .env   # then set MYOPILOT_MODEL_ID and AWS_REGION
 ```
 
 ## Run
 ```bash
-# Full app: browser window + control panel at http://localhost:8765 (open it in Chrome for voice)
-.venv/bin/python -m myopilot.main
+# Full app: Chrome + agent + control panel at http://localhost:8765 (open it in Chrome for voice)
+uv run main.py
 
 # No AWS needed: scripted stand-in model (only does the pharmacy task) to test the pipeline
-.venv/bin/python -m myopilot.main --fake
+uv run main.py --fake
 
 # One task from the terminal (dev)
-.venv/bin/python -m myopilot.cli_task "find a pharmacy near me and tell me its phone number" \
+PYTHONPATH=browser_automation_agent uv run python -m myopilot.cli_task "find a pharmacy near me and tell me its phone number" \
   --start-url https://www.nhs.uk/service-search/pharmacy/find-a-pharmacy --headed
-.venv/bin/python -m myopilot.cli_task "book community transport for a hospital appointment" \
+PYTHONPATH=browser_automation_agent uv run python -m myopilot.cli_task "book community transport for a hospital appointment" \
   --start-url http://localhost:8765/mock/transport --serve-mock --headed
 ```
-Panel keys: ←/↑ PREV · →/↓ NEXT · Enter SELECT · Esc BACK · V voice (in text questions).
+Panel keys: ↓/→ scroll_down · ↑/← scroll_up · Tab tab · Enter click · Esc back · V voice (in text questions).
 
 ## How it works
-- **Switch access:** the home screen lists everyday tasks. On any other page the LLM proposes 3–4 next actions. One SELECT starts a multi-step task.
+- **Switch access:** the home screen lists everyday tasks. On any other page the LLM proposes 3–4 next actions. One `click` starts a multi-step task.
 - **Typing in layers:**
   1. Fill fields from the saved profile (`profiles/demo_user.json`, a fictional persona).
   2. Turn questions into choices (`ask_choice`).
@@ -47,8 +45,8 @@ Panel keys: ←/↑ PREV · →/↓ NEXT · Enter SELECT · Esc BACK · V voice 
 
 ## Tests
 ```bash
-.venv/bin/python -m pytest -q tests          # safety rules
-.venv/bin/python tests/walk_mock_form.py     # demo form + browser layer + approve-then-submit
+uv run pytest -q                                              # safety + provenance rules
+uv run browser_automation_agent/tests/walk_mock_form.py       # demo form + browser layer + approve-then-submit
 ```
 
 ## Layout
@@ -59,6 +57,7 @@ Panel keys: ←/↑ PREV · →/↓ NEXT · Enter SELECT · Esc BACK · V voice 
 | `myopilot/browser.py`, `snapshot.js` | Playwright wrapper and token-lean page snapshot |
 | `myopilot/tools.py` | Tool schemas the LLM sees |
 | `myopilot/options.py` | Home tasks and per-page option proposals |
-| `myopilot/intents.py` | NEXT/PREV/SELECT/BACK bus, plus the classifier hook |
+| `myopilot/intents.py` | Command bus (scroll_down / scroll_up / tab / click / back) |
+| `myopilot/emg_source.py` | Suvrit's EMG classifier as a command source (`--emg`) |
 | `myopilot/panel/` | Control panel (FastAPI + WebSocket) |
 | `myopilot/mock_site.py` | Local demo form for the full submit path |

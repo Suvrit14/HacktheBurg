@@ -8,18 +8,20 @@ from .commands import CommandLogic, TUNED_CONFIG
 from .model import load_model
 from .stream import build_replay, stream_windows
 
-DEMO_ORDER = [6, 5, 15, 16, 2]   # fist, spread fingers, radial deviation, ulnar deviation, tab
 COMMANDS = ["scroll_down", "scroll_up", "back", "click", "tab"]    # "tab" only comes from the set-C model
 
 
 def replay_commands(model_path="models/subject1_set_c.joblib", subject_number=1, replay_rep=6,
-                    gestures=DEMO_ORDER, speed=1.0, config=None, data_dir=".", allow_training_data=False,
+                    gestures=None, speed=1.0, config=None, data_dir=".", allow_training_data=False,
                     replay=None):
     # Replays real recorded pieces as if they came from a sensor and yields one dict per window:
     # the window dict of stream_windows plus the key "event" (the command that fired on this window, or None).
     #
-    # By default it replays one repetition (replay_rep) of the gestures in the order given. To replay your own
+    # By default it replays one repetition (replay_rep) of the model's gestures. To replay your own
     # mix of recordings, build it with emg_data.library.build_replay([...]) and pass it as replay=...
+    #
+    # The pieces play in the order they appear in the recording. gestures=None replays every gesture
+    # the saved model knows; a list picks which ones (their order in the list does not matter).
     #
     # speed=1.0 is real time (one window every 125 ms), speed=None runs as fast as possible.
     # The replayed repetitions have to be ones the model was NOT trained on, otherwise the results would look
@@ -41,6 +43,8 @@ def replay_commands(model_path="models/subject1_set_c.joblib", subject_number=1,
                          f"repetitions {held_out} or set allow_training_data=True")
 
     if replay is None:
+        if gestures is None:
+            gestures = [c for c in saved["classes"] if c != 0]
         replay = build_replay(subject_number, saved["exercise"], gestures, replay_rep, data_dir)
     if config is None:
         config = saved.get("config", TUNED_CONFIG)

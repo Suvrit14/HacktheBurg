@@ -1,0 +1,24 @@
+{
+  "name": "govuk-form-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Demo GOV.UK Design System form (disabled parking badge) for testing MyoPilot gestures",
+  "main": "server.js",
+  "scripts": {
+    "build:css": "sass --pkg-importer=node --no-source-map --style=compressed src/app.scss public/app.css",
+    "start": "npm run build:css && node server.js",
+    "dev": "npm run build:css && node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.22.3",
+    "express-session": "^1.19.0",
+    "govuk-frontend": "^6.6.0",
+    "nunjucks": "^3.2.4"
+  },
+  "devDependencies": {
+    "sass": "^1.108.1"
+  }
+}

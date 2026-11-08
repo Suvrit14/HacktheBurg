@@ -1,0 +1,95 @@
+{#
+  Page layout. Uses the official GOV.UK Frontend page template, but without
+  GOV.UK branding, because this is not a GOV.UK service:
+  https://frontend.design-system.service.gov.uk/using-govuk-frontend-without-govuk-branding/
+    - Generic header instead of the GOV.UK header (no crown, no GOV.UK logotype)
+    - Service navigation shows the service name
+    - Own theme colour, icons and footer (the GOV.UK footer always shows the crown)
+#}
+{% extends "govuk/template.njk" %}
+
+{% from "govuk/components/generic-header/macro.njk" import govukGenericHeader %}
+{% from "govuk/components/service-navigation/macro.njk" import govukServiceNavigation %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+
+{% set themeColor = "#4c2c92" %}
+{% set assetPath = "/assets" %}
+
+{% block pageTitle -%}
+  {{ "Error: " if errorList | length }}{{ pageTitle }}{{ (" – " + serviceName) if pageTitle != serviceName }}
+{%- endblock %}
+
+{% block head %}
+  <link rel="stylesheet" href="/app.css">
+{% endblock %}
+
+{% block header %}
+  <header class="govuk-template__header">
+    {{ govukGenericHeader({
+      url: "/",
+      logoText: "MyoPilot demo services"
+    }) }}
+    {{ govukServiceNavigation({
+      serviceName: serviceName,
+      serviceUrl: "/"
+    }) }}
+  </header>
+{% endblock %}
+
+{% block beforeContent %}
+  {{ govukPhaseBanner({
+    tag: { text: "Demo" },
+    text: "This is not a real government service. No information leaves this computer."
+  }) }}
+  {% if backLink %}
+    {{ govukBackLink({ text: "Back", href: backLink }) }}
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if errorList | length %}
+        {{ govukErrorSummary({
+          titleText: "There is a problem",
+          errorList: errorList
+        }) }}
+      {% endif %}
+      {% block mainContent %}{% endblock %}
+    </div>
+  </div>
+{% endblock %}
+
+{% block footer %}
+  <footer class="govuk-template__footer">
+    <div class="govuk-footer">
+      <div class="govuk-width-container">
+        <div class="govuk-footer__meta">
+          <div class="govuk-footer__meta-item govuk-footer__meta-item--grow">
+            <h2 class="govuk-visually-hidden">Support links</h2>
+            <ul class="govuk-footer__inline-list">
+              <li class="govuk-footer__inline-list-item"><a class="govuk-footer__link" href="/accessibility">Accessibility statement</a></li>
+              <li class="govuk-footer__inline-list-item"><a class="govuk-footer__link" href="/cookies">Cookies</a></li>
+              <li class="govuk-footer__inline-list-item"><a class="govuk-footer__link" href="/privacy">Privacy</a></li>
+            </ul>
+            <p class="govuk-body-s app-footer__meta-text">
+              Demo service built for the MyoPilot hackathon project with the
+              <a class="govuk-footer__link" href="https://design-system.service.gov.uk/">GOV.UK Design System</a>.
+              It is not a real government service.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+{% endblock %}
+
+{% block bodyEnd %}
+  <script type="module" src="/govuk/govuk-frontend.min.js"></script>
+  <script type="module">
+    import { initAll } from "/govuk/govuk-frontend.min.js"
+    initAll()
+  </script>
+{% endblock %}

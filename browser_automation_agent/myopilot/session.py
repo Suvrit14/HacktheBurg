@@ -1,4 +1,4 @@
-"""Switch-access controller: turns NEXT/PREV/SELECT/BACK into menus, tasks and answers.
+"""Switch-access controller: turns scroll_down/scroll_up/tab/click/back into menus, tasks and answers.
 
 Screens (the `mode` sent to the panel):
   home     everyday tasks to start from
@@ -57,26 +57,26 @@ class Session:
                 "model": self.model_name}
 
     async def menu(self, mode: str, title: str, labels: list[str], **extra: Any) -> int | None:
-        """Show a menu and wait for gestures. Returns the selected index, or None on BACK."""
+        """Show a menu and wait for gestures. Returns the selected index, or None on `back`."""
         cursor = 0
         self.bus.drain()
         await self.publish(mode=mode, title=title, items=labels, cursor=cursor, **extra)
         while True:
             intent = await self.bus.next()
-            if intent is Intent.NEXT:
+            if intent in (Intent.SCROLL_DOWN, Intent.TAB):
                 cursor = (cursor + 1) % len(labels)
-            elif intent is Intent.PREV:
+            elif intent is Intent.SCROLL_UP:
                 cursor = (cursor - 1) % len(labels)
-            elif intent is Intent.SELECT:
+            elif intent is Intent.CLICK:
                 self.log.emit("choice", mode=mode, title=title, index=cursor, label=labels[cursor])
                 return cursor
             elif intent is Intent.BACK:
-                self.log.emit("choice", mode=mode, title=title, index=None, label="BACK")
+                self.log.emit("choice", mode=mode, title=title, index=None, label="back")
                 return None
             await self.publish(mode=mode, title=title, items=labels, cursor=cursor, **extra)
 
     async def ask_text(self, question: str) -> str | None:
-        """Wait for dictated text from the panel, or BACK."""
+        """Wait for dictated text from the panel, or `back`."""
         while not self.text_q.empty():
             self.text_q.get_nowait()
         self.bus.drain()
@@ -98,12 +98,12 @@ class Session:
         if kind == "choice":
             opts = payload.get("options") or ["Yes", "No"]
             i = await self.menu("ask", q, opts)
-            return "BACK" if i is None else opts[i]
+            return "back" if i is None else opts[i]
         if kind == "confirm":
             i = await self.menu("confirm", q, ["Approve", "Don't submit"])
             return "APPROVED" if i == 0 else "REJECTED"
         text = await self.ask_text(q)
-        return text or "BACK"
+        return text or "back"
 
     async def run_task(self, goal: str, start_url: str | None = None) -> Screen:
         await self.publish(mode="working", title=goal, items=[], cursor=0, caption="Starting…")
@@ -182,5 +182,6 @@ class Session:
 
 def _slim(ev: dict[str, Any]) -> dict[str, Any]:
     keep = ("type", "t", "tool", "explain", "ok", "error", "url", "latency_s", "input_tokens", "output_tokens",
-            "model", "purpose", "question", "reply", "label", "mode", "reason", "intent", "source", "answer", "note")
+            "model", "purpose", "question", "reply", "label", "mode", "reason", "intent", "source", "answer", "note",
+            "command", "gesture", "confidence", "intended", "decoded", "suppressed_repeats")
     return {k: ev[k] for k in keep if k in ev}

@@ -1,0 +1,14 @@
+{% extends "question.njk" %}
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+
+{% block fields %}
+  {{ govukCharacterCount({
+    id: "condition",
+    name: "condition",
+    value: values.condition,
+    maxlength: options.CONDITION_MAX,
+    label: { text: pageTitle, isPageHeading: true, classes: "govuk-label--l" },
+    hint: { text: "Include any walking aids you use, and any pain, breathlessness or tiredness you get when walking." },
+    errorMessage: { text: errors["condition"] } if errors["condition"] else false
+  }) }}
+{% endblock %}

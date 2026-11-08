@@ -1,0 +1,56 @@
+{# GOV.UK "Start using a service" pattern: start page with a Start button #}
+{% extends "layout.njk" %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/inset-text/macro.njk" import govukInsetText %}
+{% from "govuk/components/warning-text/macro.njk" import govukWarningText %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+
+{% block mainContent %}
+  <h1 class="govuk-heading-xl">{{ serviceName }}</h1>
+
+  <p class="govuk-body">Use this service to apply for a disabled parking badge. A badge lets you park closer to where you need to go, for example in disabled parking bays.</p>
+
+  {{ govukInsetText({
+    text: "This is a demo service for testing accessible ways to use websites. It is not connected to any council and you will not get a real badge."
+  }) }}
+
+  <h2 class="govuk-heading-m">Who can get a badge</h2>
+  <p class="govuk-body">You can apply for yourself or for someone you look after. You may be able to get a badge if you:</p>
+  <ul class="govuk-list govuk-list--bullet">
+    <li>get Personal Independence Payment (PIP) with 8 points or more in the ‘moving around’ activity</li>
+    <li>get the higher rate mobility component of Disability Living Allowance (DLA)</li>
+    <li>get War Pensioners’ Mobility Supplement</li>
+    <li>cannot walk, or find walking very difficult, because of a long-term condition</li>
+  </ul>
+
+  <h2 class="govuk-heading-m">Before you start</h2>
+  <p class="govuk-body">You’ll need:</p>
+  <ul class="govuk-list govuk-list--bullet">
+    <li>the full name, date of birth and address of the person who needs the badge</li>
+    <li>details of any benefits they get</li>
+    <li>an email address or phone number, if you want us to contact you that way</li>
+  </ul>
+  <p class="govuk-body">It takes around 10 minutes to apply.</p>
+
+  {{ govukWarningText({
+    text: "You can be fined up to £1,000 if you give false information.",
+    iconFallbackText: "Warning"
+  }) }}
+
+  {{ govukButton({
+    text: "Start now",
+    href: "/who-for",
+    isStartButton: true
+  }) }}
+
+  {{ govukDetails({
+    summaryText: "If you need help applying",
+    text: "In a real service you could ask your local council to apply for you over the phone or send you a paper form. This demo has no helpline."
+  }) }}
+
+  <h2 class="govuk-heading-m">How long it takes</h2>
+  <p class="govuk-body">Councils usually decide within 12 weeks. If your application is approved, the badge is posted to the address you give.</p>
+
+  <h2 class="govuk-heading-m">If you already have a badge</h2>
+  <p class="govuk-body">You need to apply again before your badge expires. Badges usually last up to 3 years.</p>
+{% endblock %}

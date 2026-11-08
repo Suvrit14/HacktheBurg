@@ -45,7 +45,7 @@ class ProvenanceGuard:
         self.answers = []
 
     def add_answer(self, reply: Any) -> None:
-        if isinstance(reply, str) and reply not in ("BACK", "APPROVED", "REJECTED"):
+        if isinstance(reply, str) and reply not in ("back", "APPROVED", "REJECTED"):
             self.answers.append(reply)
 
     # ---------------------------------------------------------------- checks

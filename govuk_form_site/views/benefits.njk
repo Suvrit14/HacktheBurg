@@ -1,0 +1,24 @@
+{% extends "question.njk" %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+
+{% block fields %}
+  {{ govukCheckboxes({
+    name: "benefits",
+    idPrefix: "benefits",
+    values: values.benefits,
+    fieldset: {
+      legend: { text: pageTitle, isPageHeading: true, classes: "govuk-fieldset__legend--l" }
+    },
+    hint: { text: "Select all that apply." },
+    errorMessage: { text: errors["benefits"] } if errors["benefits"] else false,
+    items: [
+      { value: "pip", text: options.BENEFITS["pip"],
+        hint: { text: "With 8 points or more in the 'moving around' activity" } },
+      { value: "dla", text: options.BENEFITS["dla"] },
+      { value: "wpms", text: options.BENEFITS["wpms"] },
+      { value: "afcs", text: options.BENEFITS["afcs"] },
+      { divider: "or" },
+      { value: "none", text: options.BENEFITS["none"], behaviour: "exclusive" }
+    ]
+  }) }}
+{% endblock %}

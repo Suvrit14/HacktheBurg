@@ -9,11 +9,14 @@ import time
 import numpy as np
 
 from .emg import extract_features, load_raw_db5
+from .model import CLASSES
 
 
-def build_replay(subject_number=1, exercise_number=2, gestures=(6, 5, 15, 16), replay_rep=6, data_dir="."):
+def build_replay(subject_number=1, exercise_number=2, gestures=None, replay_rep=6, data_dir="."):
     # For each gesture: the real rest just before it, then the gesture itself, both from repetition replay_rep.
-    # The pieces are joined in the order given. Only samples labelled with replay_rep are used,
+    # The pieces are joined in the order they appear in the RECORDING (not in the order of the list),
+    # so the replay plays the data exactly in its original sequence. gestures=None uses the model's gestures
+    # (CLASSES without rest). Only samples labelled with replay_rep are used,
     # so nothing the final model trained on (repetitions 1 to 5) ends up in the replay.
     #
     # Returns a dict:
@@ -22,6 +25,7 @@ def build_replay(subject_number=1, exercise_number=2, gestures=(6, 5, 15, 16), r
     #   sampling_freq  Hz
     #   segments       one dict per gesture: gesture, rest_start, gesture_start, gesture_end (sample numbers in the replay)
     emg, restimulus, rerepetition, sampling_freq = load_raw_db5(subject_number, exercise_number, data_dir)
+    gestures = recording_order(restimulus, rerepetition, gestures, replay_rep)
 
     emg_pieces = []
     label_pieces = []
@@ -61,6 +65,26 @@ def build_replay(subject_number=1, exercise_number=2, gestures=(6, 5, 15, 16), r
         "sampling_freq": sampling_freq,
         "segments": segments,
     }
+
+
+def recording_order(restimulus, rerepetition, gestures=None, replay_rep=6):
+    # The gestures sorted by where they first appear in repetition replay_rep of the recording.
+    # gestures=None means every gesture the model knows (CLASSES without rest).
+    if gestures is None:
+        gestures = [c for c in CLASSES if c != 0]
+    first_sample = {}
+    for gesture in gestures:
+        indices = np.flatnonzero((restimulus == gesture) & (rerepetition == replay_rep))
+        if len(indices) == 0:
+            raise ValueError(f"gesture {gesture} has no samples in repetition {replay_rep}")
+        first_sample[int(gesture)] = indices[0]
+    return sorted((int(g) for g in gestures), key=lambda g: first_sample[g])
+
+
+def gestures_in_recording_order(subject_number=1, exercise_number=2, gestures=None, replay_rep=6, data_dir="."):
+    # Same as recording_order, but reads the recording file itself.
+    _, restimulus, rerepetition, _ = load_raw_db5(subject_number, exercise_number, data_dir)
+    return recording_order(restimulus, rerepetition, gestures, replay_rep)
 
 
 def build_rest_replay(subject_number=1, exercise_number=2, replay_rep=6, data_dir="."):

@@ -1,0 +1,34 @@
+{# GOV.UK "Check answers" pattern #}
+{% extends "layout.njk" %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% block mainContent %}
+  <h1 class="govuk-heading-l">{{ pageTitle }}</h1>
+
+  {% set summaryRows = [] %}
+  {% for row in rows %}
+    {% set valueHtml %}
+      {%- if row.value is string -%}
+        {{ row.value }}
+      {%- else -%}
+        {%- for line in row.value -%}{{ line }}{% if not loop.last %}<br>{% endif %}{%- endfor -%}
+      {%- endif -%}
+    {% endset %}
+    {% set summaryRows = (summaryRows.push({
+      key: { text: row.key },
+      value: { html: valueHtml },
+      actions: { items: [ { href: row.href, text: "Change", visuallyHiddenText: row.hidden } ] }
+    }), summaryRows) %}
+  {% endfor %}
+
+  <h2 class="govuk-heading-m">Application details</h2>
+  {{ govukSummaryList({ rows: summaryRows }) }}
+
+  <h2 class="govuk-heading-m">Now send your application</h2>
+  <p class="govuk-body">By submitting this application you are confirming that, to the best of your knowledge, the details you are providing are correct.</p>
+
+  <form method="post" novalidate>
+    {{ govukButton({ text: "Accept and send", preventDoubleClick: true }) }}
+  </form>
+{% endblock %}

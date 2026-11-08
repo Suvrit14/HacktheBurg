@@ -37,7 +37,7 @@ from .tools import ALL_TOOLS, BROWSER_TOOLS, HUMAN_TOOLS
 SNAPSHOT_ELEMENTS = 150
 
 SYSTEM_PROMPT = """You are MyoPilot, a web assistant acting for a person with limited hand movement.
-They control you with four gestures (NEXT, PREV, SELECT, BACK) and cannot type. You operate a real
+They control you with five gestures (scroll_down, scroll_up, tab, click, back) and cannot type. You operate a real
 web browser for them on live websites and complete everyday tasks end to end.
 
 HOW YOU SEE THE PAGE
@@ -221,13 +221,13 @@ class TaskAgent:
             if name == "ask_choice":
                 options = [str(o) for o in (args.get("options") or [])][:4]
                 reply = interrupt({"kind": "choice", "question": args.get("question", ""), "options": options})
-                content = "User pressed BACK (cancelled)." if reply in (None, "BACK") else f"User chose: {reply}"
+                content = "User made the back gesture (cancelled)." if reply in (None, "back") else f"User chose: {reply}"
             elif name == "ask_text":
                 reply = interrupt({"kind": "text", "question": args.get("question", "")})
-                content = "User cancelled." if not reply or reply == "BACK" else f"User said: {reply}"
+                content = "User cancelled." if not reply or reply == "back" else f"User said: {reply}"
             else:  # confirm
                 reply = interrupt({"kind": "confirm", "question": args.get("summary", "")})
-                approved = reply is True or str(reply).upper() in ("APPROVED", "YES", "SELECT")
+                approved = reply is True or str(reply).upper() in ("APPROVED", "YES", "CLICK")
                 if approved:
                     self.guard.submit_approved = True
                 content = "APPROVED" if approved else "REJECTED by the user. Do not submit."
