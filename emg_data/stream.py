@@ -11,7 +11,7 @@ import numpy as np
 from .emg import extract_features, load_raw_db5
 
 
-def build_replay(subject_number=1, exercise_number=2, gestures=(6, 5, 15, 16), replay_rep=6, data_dir="data"):
+def build_replay(subject_number=1, exercise_number=2, gestures=(6, 5, 15, 16), replay_rep=6, data_dir="."):
     # For each gesture: the real rest just before it, then the gesture itself, both from repetition replay_rep.
     # The pieces are joined in the order given. Only samples labelled with replay_rep are used,
     # so nothing the final model trained on (repetitions 1 to 5) ends up in the replay.
@@ -63,7 +63,7 @@ def build_replay(subject_number=1, exercise_number=2, gestures=(6, 5, 15, 16), r
     }
 
 
-def build_rest_replay(subject_number=1, exercise_number=2, replay_rep=6, data_dir="data"):
+def build_rest_replay(subject_number=1, exercise_number=2, replay_rep=6, data_dir="."):
     # All the rest of one repetition, from the rest periods before every one of the 17 movements, joined together.
     # No gesture is in it, so every command that fires while it plays is a false trigger.
     # Returns the same kind of dict as build_replay (without segments).

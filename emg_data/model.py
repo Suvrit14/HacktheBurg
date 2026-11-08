@@ -17,6 +17,11 @@ GESTURES = {
 }
 CLASSES = [0, 6, 5, 15, 16]     # 0 = rest
 
+# Set C = set A + the "tab" gesture (class 2)
+GESTURES_SET_C = dict(GESTURES)
+GESTURES_SET_C[2] = "extension of index and middle, flexion of the others"
+CLASSES_SET_C = [0, 6, 5, 15, 16, 2]
+
 
 def train_model(features, y, rep, train_reps=(1, 2, 3, 4, 5), classes=CLASSES, equal_priors=True):
     # Keep only the chosen classes and only the windows from the training repetitions.

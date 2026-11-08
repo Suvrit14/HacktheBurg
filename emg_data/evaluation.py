@@ -10,7 +10,7 @@ from .commands import CommandLogic, COMMAND_FOR_GESTURE
 from .stream import build_replay, build_rest_replay, stream_windows
 
 
-def build_fold(model, replay_rep, subject_number=1, gestures=(6, 5, 15, 16), exercise_number=2, data_dir="data"):
+def build_fold(model, replay_rep, subject_number=1, gestures=(6, 5, 15, 16), exercise_number=2, data_dir="."):
     # Everything needed to test one repetition: the model streams (1) the gesture replay and (2) the rest-only
     # replay of that repetition. The model must NOT have been trained on replay_rep.
     gesture_replay = build_replay(subject_number, exercise_number, gestures, replay_rep, data_dir)

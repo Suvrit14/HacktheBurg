@@ -38,7 +38,7 @@ def majority_label(label_windows):
     return np.array(labels)
 
 
-def load_raw_db5(subject_number, exercise_number=2, data_dir="data/"):
+def load_raw_db5(subject_number, exercise_number=2, data_dir="."):
     # The recording as it is in the file, before any windowing.
     # Looks for <data_dir>/s<subject>/S<subject>_E<exercise>_A1.mat
     # Returns: emg (num_samples, 16), restimulus (num_samples,), rerepetition (num_samples,), sampling_freq
@@ -65,7 +65,7 @@ def load_raw_db5(subject_number, exercise_number=2, data_dir="data/"):
     return emg, restimulus.ravel().astype(int), rerepetition.ravel().astype(int), sampling_freq
 
 
-def load_db5(subject_number, exercise_number=2, window_length=50, step_size=25, data_dir="data"):
+def load_db5(subject_number, exercise_number=2, window_length=50, step_size=25, data_dir="."):
     # Returns: emg_windows (num_windows, window_length, 16), y (num_windows,), rep (num_windows,), sampling_freq
     emg, restimulus, rerepetition, sampling_freq = load_raw_db5(subject_number, exercise_number, data_dir)
 
