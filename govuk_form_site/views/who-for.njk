@@ -1,0 +1,19 @@
+{% extends "question.njk" %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+
+{% block fields %}
+  {{ govukRadios({
+    name: "whoFor",
+    idPrefix: "who-for",
+    value: values.whoFor,
+    fieldset: {
+      legend: { text: pageTitle, isPageHeading: true, classes: "govuk-fieldset__legend--l" }
+    },
+    hint: { text: "You can apply for someone else, for example a family member you look after." },
+    errorMessage: { text: errors["who-for"] } if errors["who-for"] else false,
+    items: [
+      { value: "myself", text: options.WHO_FOR["myself"] },
+      { value: "someone-else", text: options.WHO_FOR["someone-else"] }
+    ]
+  }) }}
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "question.njk" %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+
+{% block fields %}
+  {{ govukRadios({
+    name: "walking",
+    idPrefix: "walking",
+    value: values.walking,
+    fieldset: {
+      legend: { text: pageTitle, isPageHeading: true, classes: "govuk-fieldset__legend--l" }
+    },
+    hint: { text: "Think about walking on flat ground, using any walking aids you normally use." },
+    errorMessage: { text: errors["walking"] } if errors["walking"] else false,
+    items: [
+      { value: "less-than-50", text: options.WALKING["less-than-50"] },
+      { value: "50-to-100", text: options.WALKING["50-to-100"] },
+      { value: "more-than-100", text: options.WALKING["more-than-100"] },
+      { value: "cannot-walk", text: options.WALKING["cannot-walk"] }
+    ]
+  }) }}
+{% endblock %}

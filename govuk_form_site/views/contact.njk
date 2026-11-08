@@ -1,0 +1,40 @@
+{% extends "question.njk" %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
+{% block fields %}
+  {% set emailHtml %}
+    {{ govukInput({
+      id: "contact-email", name: "contactEmail", type: "email", value: values.email,
+      autocomplete: "email", spellcheck: false, classes: "govuk-!-width-two-thirds",
+      label: { text: "Email address" },
+      errorMessage: { text: errors["contact-email"] } if errors["contact-email"] else false
+    }) }}
+  {% endset %}
+  {% set phoneHtml %}
+    {{ govukInput({
+      id: "contact-phone", name: "contactPhone", type: "tel", value: values.phone,
+      autocomplete: "tel", classes: "govuk-input--width-20",
+      label: { text: "Phone number" },
+      hint: { text: "For international numbers include the country code" },
+      errorMessage: { text: errors["contact-phone"] } if errors["contact-phone"] else false
+    }) }}
+  {% endset %}
+
+  {# Radios with conditionally revealed questions #}
+  {{ govukRadios({
+    name: "contact",
+    idPrefix: "contact",
+    value: values.contact,
+    fieldset: {
+      legend: { text: pageTitle, isPageHeading: true, classes: "govuk-fieldset__legend--l" }
+    },
+    hint: { text: "Select one option." },
+    errorMessage: { text: errors["contact"] } if errors["contact"] else false,
+    items: [
+      { value: "email", text: options.CONTACT["email"], conditional: { html: emailHtml } },
+      { value: "phone", text: options.CONTACT["phone"], conditional: { html: phoneHtml } },
+      { value: "post", text: options.CONTACT["post"] }
+    ]
+  }) }}
+{% endblock %}

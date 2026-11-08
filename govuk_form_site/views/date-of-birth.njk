@@ -1,0 +1,25 @@
+{% extends "question.njk" %}
+{% from "govuk/components/date-input/macro.njk" import govukDateInput %}
+
+{% set dobError = errors["dob-day"] or errors["dob-month"] or errors["dob-year"] %}
+
+{% block fields %}
+  {# GOV.UK "Dates" pattern: memorable date, three fields #}
+  {{ govukDateInput({
+    id: "dob",
+    namePrefix: "dob",
+    fieldset: {
+      legend: { text: pageTitle, isPageHeading: true, classes: "govuk-fieldset__legend--l" }
+    },
+    hint: { text: "For example, 27 3 1987" },
+    errorMessage: { text: dobError } if dobError else false,
+    items: [
+      { name: "day", label: "Day", value: values.day, autocomplete: "bday-day",
+        classes: "govuk-input--width-2" + (" govuk-input--error" if "day" in invalid else "") },
+      { name: "month", label: "Month", value: values.month, autocomplete: "bday-month",
+        classes: "govuk-input--width-2" + (" govuk-input--error" if "month" in invalid else "") },
+      { name: "year", label: "Year", value: values.year, autocomplete: "bday-year",
+        classes: "govuk-input--width-4" + (" govuk-input--error" if "year" in invalid else "") }
+    ]
+  }) }}
+{% endblock %}

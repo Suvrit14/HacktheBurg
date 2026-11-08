@@ -1,0 +1,11 @@
+{# One question per page: GOV.UK "Question pages" pattern.
+   The form has no action, so it posts back to the same URL (keeps ?change=true). #}
+{% extends "layout.njk" %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% block mainContent %}
+  <form method="post" novalidate>
+    {% block fields %}{% endblock %}
+    {{ govukButton({ text: "Continue", preventDoubleClick: true }) }}
+  </form>
+{% endblock %}

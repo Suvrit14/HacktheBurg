@@ -1,0 +1,23 @@
+{# GOV.UK "Confirmation pages" pattern #}
+{% extends "layout.njk" %}
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+
+{% block mainContent %}
+  {{ govukPanel({
+    titleText: "Application complete",
+    html: "Your reference number<br><strong>" + reference + "</strong>"
+  }) }}
+
+  <p class="govuk-body">
+    {% if contact == "email" %}We have sent you a confirmation email.
+    {% elif contact == "phone" %}We will send you a text message to confirm.
+    {% else %}We will send you a letter to confirm.{% endif %}
+    (This is a demo, so nothing is actually sent.)
+  </p>
+
+  <h2 class="govuk-heading-m">What happens next</h2>
+  <p class="govuk-body">We’ve sent your application to your council. They will contact you if they need more information.</p>
+  <p class="govuk-body">They will usually decide within 12 weeks.</p>
+
+  <p class="govuk-body"><a class="govuk-link" href="/start-again">Start a new application</a></p>
+{% endblock %}
