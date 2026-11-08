@@ -1,5 +1,7 @@
 # MyoPilot browser automation: work done so far
 
+> **Superseded.** This file covers only Saturday's LLM agent work. For the whole project, including the gesture control, the GOV.UK form site, the camera, WebSockets, the dashboard and the merge, read [`WORK_DONE_SO_FAR.md`](../../WORK_DONE_SO_FAR.md) at the repo root. Since then the commands have become `scroll_up / scroll_down / tab / click / back`; `forward` is now `click`.
+
 Status as of Saturday 7 November 2026 (HackTheBurgh XIII, Edinburgh). Owner of this part: Karthik.
 
 ---

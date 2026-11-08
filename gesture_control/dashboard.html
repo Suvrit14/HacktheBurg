@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MyoPilot live</title>
+<style>
+  :root {
+    --bg: #0e1116; --panel: #161b22; --line: #2a313c; --ink: #e6edf3; --muted: #8b949e;
+    --accent: #ff8c00; --ok: #3fb950; --bad: #f85149; --warn: #d29922; --blue: #58a6ff; --cyan: #39c5cf;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+               font: 14px/1.4 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+  header { display: flex; align-items: center; gap: 18px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 18px; margin: 0; letter-spacing: .3px; }
+  header h1 span { color: var(--accent); }
+  .pill { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .pill.ok { color: var(--ok); border-color: #23412b; } .pill.bad { color: var(--bad); border-color: #4a2525; }
+  .pill.busy { color: var(--warn); border-color: #4a3b18; }
+  .spacer { flex: 1; }
+  #page { color: var(--muted); font-size: 12px; max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  main { display: grid; gap: 12px; padding: 12px; height: calc(100% - 50px);
+         grid-template-columns: minmax(340px, 1fr) minmax(420px, 1.25fr);
+         grid-template-rows: minmax(300px, 1fr) minmax(300px, 1fr); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+           display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0 0 10px;
+              display: flex; align-items: center; gap: 10px; }
+  .panel h2 .tag { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--cyan);
+                   border: 1px solid #1f4d52; border-radius: 6px; padding: 1px 8px; font-size: 12px; }
+  /* camera */
+  #camera { grid-column: 1; grid-row: 1; }
+  .camwrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: #0b0d11;
+             border-radius: 8px; overflow: hidden; position: relative; }
+  #frame { max-width: 100%; max-height: 100%; display: none; }
+  #nocam { color: var(--muted); text-align: center; padding: 20px; }
+  .camfoot { display: flex; gap: 16px; margin-top: 8px; font-size: 13px; color: var(--muted); }
+  .camfoot b { color: var(--ink); }
+  /* decoder */
+  #decoder { grid-column: 2; grid-row: 1; }
+  .dgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { background: #0f141a; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .card .k { font-size: 11px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); }
+  .card .v { font-size: 26px; font-weight: 700; margin-top: 2px; }
+  .card .s { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  #cmd.v { color: var(--accent); }
+  .dots { display: flex; gap: 6px; margin-top: 8px; }
+  .dot { width: 18px; height: 18px; border-radius: 50%; background: #222a33; border: 1px solid #333c47; }
+  .dot.on { background: var(--blue); border-color: var(--blue); }
+  .dot.need { outline: 2px dashed #6e7681; outline-offset: 2px; }
+  .match { display: flex; align-items: center; gap: 10px; font-size: 16px; margin-top: 4px; }
+  .flag { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+  .flag.ok { background: #12301b; color: var(--ok); } .flag.bad { background: #3b1414; color: var(--bad); }
+  .flag.idle { background: #222a33; color: var(--muted); }
+  #spark { width: 100%; height: 34px; display: block; margin-top: 6px; }
+  .timeline { margin-top: 10px; flex: 1; min-height: 0; overflow: auto; font-size: 12.5px; }
+  .tl { display: grid; grid-template-columns: 70px 1fr; gap: 8px; padding: 4px 0; border-top: 1px solid #1f252d; }
+  .tl .t { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tl .bad { color: var(--bad); } .tl .ok { color: var(--ok); }
+  /* emg */
+  #emg { grid-column: 1; grid-row: 2; }
+  #emgCanvas { flex: 1; min-height: 0; width: 100%; background: #0b0d11; border-radius: 8px; }
+  #heat { width: 100%; height: 150px; margin-top: 10px; display: block; }
+  .legend { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  /* logs */
+  #logs { grid-column: 2; grid-row: 2; }
+  #logbox { flex: 1; min-height: 0; overflow: auto; font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+            background: #0b0d11; border-radius: 8px; padding: 8px 10px; }
+  .lg { white-space: pre-wrap; word-break: break-word; }
+  .lg .tm { color: #6e7681; } .lg .tg { display: inline-block; width: 64px; font-weight: 700; }
+  .tg.SERVER { color: #8b949e; } .tg.SITE { color: #d2a8ff; } .tg.CLIENT { color: var(--blue); }
+  .tg.CAMERA { color: var(--cyan); } .tg.BROWSER { color: var(--ok); } .tg.SKIP { color: var(--warn); }
+  .tg.ERROR { color: var(--bad); } .tg.EMG { color: var(--accent); }
+  @media (max-width: 1100px) {
+    main { grid-template-columns: 1fr; grid-template-rows: auto; height: auto; }
+    #camera, #decoder, #emg, #logs { grid-column: 1; grid-row: auto; min-height: 360px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Myo<span>Pilot</span> live</h1>
+  <span class="pill bad" id="conn">connecting…</span>
+  <span class="pill" id="browser">browser: –</span>
+  <span class="pill" id="camState">camera: –</span>
+  <span class="spacer"></span>
+  <span id="page"></span>
+</header>
+
+<main>
+  <section class="panel" id="camera">
+    <h2>1 · Camera <span class="tag" id="camTag">MediaPipe hand pose</span></h2>
+    <div class="camwrap">
+      <img id="frame" alt="Live camera feed with the tracked hand">
+      <div id="nocam">No camera picture yet.<br>Start the camera with<br><code>uv run python -m camera --ws ws://localhost:8800</code></div>
+    </div>
+    <div class="camfoot">
+      <span>pose now: <b id="pose">–</b></span>
+      <span>status: <b id="camStatus">–</b></span>
+      <span>fps: <b id="fps">–</b></span>
+    </div>
+  </section>
+
+  <section class="panel" id="decoder">
+    <h2>3 · Decoder <span class="tag" id="modelTag">EMG classifier</span></h2>
+    <div class="dgrid">
+      <div class="card">
+        <div class="k">Decoded gesture</div>
+        <div class="v" id="decoded">–</div>
+        <div class="dots" id="dots"></div>
+        <div class="s" id="voteText">waiting for EMG windows</div>
+      </div>
+      <div class="card">
+        <div class="k">Resulting command</div>
+        <div class="v" id="cmd">–</div>
+        <div class="s" id="cmdText">no command yet</div>
+      </div>
+      <div class="card">
+        <div class="k">Camera vs EMG decoder</div>
+        <div class="match"><span>camera: <b id="camLabel">–</b></span><span>→</span><span>EMG: <b id="emgLabel">–</b></span></div>
+        <div class="s"><span class="flag idle" id="matchFlag">no recording</span></div>
+      </div>
+      <div class="card">
+        <div class="k">Decode time per window</div>
+        <div class="v" id="decodeMs">–</div>
+        <div class="s" id="decodeText">budget: one window every 125 ms</div>
+        <canvas id="spark"></canvas>
+      </div>
+    </div>
+    <div class="timeline" id="timeline"></div>
+  </section>
+
+  <section class="panel" id="emg">
+    <h2>2 · EMG <span class="tag" id="emgTag">Recorded NinaPro EMG</span></h2>
+    <canvas id="emgCanvas"></canvas>
+    <canvas id="heat"></canvas>
+    <div class="legend">Top: the 16 channels of the recording being played, scrolling in real time (channels 1–8 and 9–16 are the two armbands).
+      Bottom: muscle activity (RMS) per channel: the live window, and the average for each gesture so far.</div>
+  </section>
+
+  <section class="panel" id="logs">
+    <h2>4 · Logs</h2>
+    <div id="logbox"></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const NAMES = { 0: 'rest', 6: 'fist', 5: 'spread', 2: 'tab (V)', 15: 'radial', 16: 'ulnar' };
+const BY_NAME = { rest: 0, fist: 6, spread: 5, tab: 2, v: 2, radial: 15, ulnar: 16 };
+const HEAT_ROWS = [['now', null], ['rest', 0], ['fist', 6], ['spread', 5], ['tab (V)', 2], ['radial', 15], ['ulnar', 16]];
+const CHANNELS = 16, HISTORY = 1000;            // 5 s at 200 Hz
+
+let meta = { sampling_freq: 200, step_size: 25, config: { vote_window: 5, min_confidence: 0.99 }, subject: '?' };
+const emgBuf = Array.from({ length: CHANNELS }, () => new Float32Array(HISTORY));
+let emgFill = 0, lastIndex = -1, lastRms = new Array(CHANNELS).fill(0);
+const heatSum = {}, heatCount = {};
+const decodeTimes = [], arrivals = [];
+let frameUrl = null, frameTimes = [];
+let current = { camera: null, repetition: null };
+
+// ---------------------------------------------------------------- connection
+let ws;
+function connect() {
+  ws = new WebSocket(`ws://${location.host}`);
+  ws.binaryType = 'blob';
+  ws.onopen = () => { setPill('conn', 'connected', 'ok'); ws.send(JSON.stringify({ type: 'hello', client: 'dashboard' })); };
+  ws.onclose = () => { setPill('conn', 'disconnected, retrying…', 'bad'); setTimeout(connect, 1500); };
+  ws.onmessage = (e) => {
+    if (e.data instanceof Blob) return onFrame(e.data);
+    const m = JSON.parse(e.data);
+    ({ hello: onHello, status: onStatus, result: onResult, log: onLog, meta: onMeta,
+       window: onWindow, camera: onCamera, recording: onRecording })[m.type]?.(m);
+  };
+}
+function setPill(id, text, cls) { const el = $(id); el.textContent = text; el.className = 'pill ' + (cls || ''); }
+
+// ---------------------------------------------------------------- 1 camera
+function onFrame(blob) {
+  const url = URL.createObjectURL(blob);
+  const img = $('frame');
+  img.onload = () => { if (frameUrl) URL.revokeObjectURL(frameUrl); frameUrl = url; };
+  img.src = url; img.style.display = 'block'; $('nocam').style.display = 'none';
+  const now = performance.now(); frameTimes.push(now); while (frameTimes[0] < now - 2000) frameTimes.shift();
+  $('fps').textContent = (frameTimes.length / 2).toFixed(0);
+}
+function onCamera(m) {
+  $('pose').textContent = m.pose ?? '–';
+  $('camStatus').textContent = m.status ?? '–';
+  setPill('camState', 'camera: ' + (m.status ?? 'on'), m.status === 'ready' ? 'ok' : (m.status === 'blocked' ? 'busy' : ''));
+}
+
+// ---------------------------------------------------------------- browser + header
+function onHello(m) { showPage(m.title, m.url); setPill('browser', 'browser: ' + m.state, m.state === 'ready' ? 'ok' : 'busy'); }
+function onStatus(m) { setPill('browser', 'browser: ' + m.state + (m.state === 'busy' ? ' (' + m.command + ')' : ''), m.state === 'ready' ? 'ok' : 'busy'); }
+function showPage(title, url) { if (url) $('page').textContent = (title || '') + '  ·  ' + url.replace(/^https?:\/\/[^/]+/, ''); }
+function onResult(m) {
+  if (m.ok) showPage(m.title, m.url);
+  const text = m.ok ? `${m.result} <span class="t">(${m.ms} ms)</span>` : `<span class="bad">not done: ${m.skipped || m.error}</span>`;
+  addTimeline(`browser: <b>${m.command}</b> → ${text}`);
+}
+
+// ---------------------------------------------------------------- 3 decoder
+function onMeta(m) {
+  meta = { ...meta, ...m };
+  const tag = `Recorded NinaPro EMG, Subject ${m.subject}`;
+  $('emgTag').textContent = tag;
+  $('modelTag').textContent = `LDA · vote over ${m.config?.vote_window} windows · confidence ≥ ${m.config?.min_confidence}`;
+}
+function onRecording(m) {
+  if (m.kind === 'start') {
+    current = { camera: m.camera_gesture, repetition: m.repetition };
+    $('camLabel').textContent = m.camera_gesture; $('emgLabel').textContent = '…';
+    setFlag('decoding…', 'idle');
+    $('emgTag').textContent = `Recorded NinaPro EMG, Subject ${meta.subject} · repetition ${m.repetition}`;
+    addTimeline(`camera saw <b>${m.camera_gesture}</b> → playing recorded EMG (repetition ${m.repetition}), expecting <b>${m.expected_command}</b>`);
+  } else {
+    const ok = m.match;
+    setFlag(ok ? 'MATCH' : 'MISMATCH', ok ? 'ok' : 'bad');
+    addTimeline(`recording finished: decoded <b>${(m.decoded_commands || []).join(', ') || 'nothing'}</b> ` +
+                (ok ? '<span class="ok">✓ match</span>' : '<span class="bad">✗ mismatch</span>'));
+  }
+}
+function setFlag(text, cls) { const f = $('matchFlag'); f.textContent = text; f.className = 'flag ' + cls; }
+
+function onWindow(w) {
+  // decode time + real-time rate
+  decodeTimes.push(w.decode_ms); if (decodeTimes.length > 80) decodeTimes.shift();
+  // windows per second while a recording plays: from the median gap between windows (pauses between recordings ignored)
+  const now = performance.now(); arrivals.push(now); while (arrivals.length > 17) arrivals.shift();
+  const gaps = arrivals.slice(1).map((t, i) => t - arrivals[i]).sort((a, b) => a - b);
+  const rate = gaps.length ? 1000 / gaps[Math.floor(gaps.length / 2)] : 0;
+  const avg = decodeTimes.reduce((a, b) => a + b, 0) / decodeTimes.length;
+  const budget = 1000 * (meta.step_size || 25) / (meta.sampling_freq || 200);
+  $('decodeMs').textContent = w.decode_ms.toFixed(2) + ' ms';
+  $('decodeText').textContent = `avg ${avg.toFixed(2)} ms · max ${Math.max(...decodeTimes).toFixed(2)} ms · ` +
+    `${rate.toFixed(1)} windows/s · ${(100 * avg / budget).toFixed(1)}% of the ${budget} ms budget`;
+  drawSpark(budget);
+
+  // vote
+  const v = w.vote || {}, of = v.of ?? 0, agree = v.agree ?? 0, needed = v.needed ?? 3, size = meta.config?.vote_window ?? 5;
+  const decided = v.state;
+  $('decoded').textContent = decided === null || decided === undefined ? 'undecided' : (NAMES[decided] ?? decided);
+  const dots = $('dots'); dots.innerHTML = '';
+  for (let i = 0; i < size; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i < agree ? ' on' : '') + (i === needed - 1 ? ' need' : '');
+    dots.appendChild(d);
+  }
+  $('voteText').textContent = v.leading === null || v.leading === undefined
+    ? `no window is confident enough (≥ ${meta.config?.min_confidence}) to vote`
+    : `${agree} of ${of} windows agree on ${NAMES[v.leading] ?? v.leading} (needs ${needed})`;
+
+  // camera vs EMG
+  if (decided !== null && decided !== undefined && decided !== 0 && current.camera) {
+    $('emgLabel').textContent = NAMES[decided] ?? decided;
+    const same = BY_NAME[current.camera] === decided;
+    setFlag(same ? 'MATCH' : 'MISMATCH', same ? 'ok' : 'bad');
+  }
+
+  // command
+  if (w.command) {
+    $('cmd').textContent = w.command;
+    $('cmdText').textContent = `fired at ${w.t.toFixed(2)} s of the recording`;
+    addTimeline(`EMG decoded <b>${NAMES[decided] ?? decided}</b> → command <b style="color:var(--accent)">${w.command}</b>`, 'EMG');
+  }
+
+  // EMG buffer: the first window of a recording adds all its samples, the next ones only the new step
+  const samples = (w.index === 0 || w.index !== lastIndex + 1) ? w.emg : w.emg.slice(w.emg.length - (meta.step_size || 25));
+  lastIndex = w.index;
+  for (const row of samples) {
+    for (let c = 0; c < CHANNELS; c++) emgBuf[c][emgFill % HISTORY] = row[c];
+    emgFill++;
+  }
+  // heatmap: live window + running mean per gesture (by the true label of the recording)
+  lastRms = w.rms;
+  const g = w.true_label;
+  if (g !== null && g !== undefined) {
+    heatSum[g] = heatSum[g] || new Array(CHANNELS).fill(0);
+    heatCount[g] = (heatCount[g] || 0) + 1;
+    for (let c = 0; c < CHANNELS; c++) heatSum[g][c] += w.rms[c];
+  }
+}
+
+function addTimeline(html, tag) {
+  const row = document.createElement('div');
+  row.className = 'tl';
+  row.innerHTML = `<span class="t">${new Date().toLocaleTimeString([], { hour12: false })}</span><span>${html}</span>`;
+  const tl = $('timeline'); tl.prepend(row);
+  while (tl.children.length > 40) tl.lastChild.remove();
+}
+
+// ---------------------------------------------------------------- 4 logs
+function onLog(m) {
+  const box = $('logbox');
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 30;
+  const row = document.createElement('div');
+  row.className = 'lg';
+  row.innerHTML = `<span class="tm">${m.time}</span>  <span class="tg ${m.tag}">${m.tag}</span>${escapeHtml(m.message)}`;
+  box.appendChild(row);
+  while (box.children.length > 400) box.firstChild.remove();
+  if (atBottom) box.scrollTop = box.scrollHeight;
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+// ---------------------------------------------------------------- drawing
+function fit(canvas) {
+  const r = canvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  if (canvas.width !== Math.round(r.width * dpr) || canvas.height !== Math.round(r.height * dpr)) {
+    canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+  }
+  const ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return [ctx, r.width, r.height];
+}
+function channelColour(c) { return c < 8 ? `hsl(${180 + c * 4}, 70%, ${55 + (c % 2) * 8}%)` : `hsl(${28 + (c - 8) * 3}, 90%, ${55 + (c % 2) * 8}%)`; }
+
+function drawEmg() {
+  const [ctx, W, H] = fit($('emgCanvas'));
+  ctx.clearRect(0, 0, W, H);
+  const lane = H / CHANNELS, n = Math.min(emgFill, HISTORY), left = 34;
+  ctx.font = '10px ui-monospace, Menlo, monospace';
+  for (let c = 0; c < CHANNELS; c++) {
+    const mid = lane * c + lane / 2;
+    ctx.fillStyle = '#6e7681'; ctx.fillText(String(c + 1).padStart(2, ' '), 6, mid + 3);
+    ctx.strokeStyle = '#1b2129'; ctx.beginPath(); ctx.moveTo(left, mid); ctx.lineTo(W, mid); ctx.stroke();
+    if (n < 2) continue;
+    ctx.strokeStyle = channelColour(c); ctx.lineWidth = 1; ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const idx = (emgFill - n + i) % HISTORY;
+      const x = left + (W - left) * (i + HISTORY - n) / (HISTORY - 1);
+      const y = mid - Math.max(-1, Math.min(1, emgBuf[c][idx] / 64)) * lane * 0.48;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#6e7681'; ctx.fillText('5 s', W - 22, H - 4);
+}
+
+function heatColour(t) {   // 0..1 -> dark blue -> cyan -> yellow -> orange
+  const stops = [[13, 17, 23], [31, 77, 140], [57, 197, 207], [240, 220, 80], [255, 140, 0]];
+  const x = Math.max(0, Math.min(1, t)) * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(x)), f = x - i;
+  const c = stops[i].map((v, k) => Math.round(v + (stops[i + 1][k] - v) * f));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+function drawHeat() {
+  const [ctx, W, H] = fit($('heat'));
+  ctx.clearRect(0, 0, W, H);
+  const left = 70, top = 14, rows = HEAT_ROWS.length, cw = (W - left) / CHANNELS, rh = (H - top) / rows;
+  ctx.font = '10px ui-monospace, Menlo, monospace'; ctx.fillStyle = '#6e7681';
+  for (let c = 0; c < CHANNELS; c++) ctx.fillText(String(c + 1), left + c * cw + cw / 2 - 4, 10);
+  HEAT_ROWS.forEach(([label, g], r) => {
+    let vals = null;
+    if (g === null) vals = lastRms;
+    else if (heatCount[g]) vals = heatSum[g].map((s) => s / heatCount[g]);
+    ctx.fillStyle = r === 0 ? '#e6edf3' : '#8b949e';
+    ctx.fillText(label + (g !== null && heatCount[g] ? '' : (g === null ? '' : ' –')), 4, top + r * rh + rh / 2 + 3);
+    const max = vals ? Math.max(1, ...vals) : 1;
+    for (let c = 0; c < CHANNELS; c++) {
+      ctx.fillStyle = vals ? heatColour(vals[c] / max) : '#12171d';
+      ctx.fillRect(left + c * cw + 1, top + r * rh + 1, cw - 2, rh - 2);
+    }
+  });
+}
+
+function drawSpark(budget) {
+  const [ctx, W, H] = fit($('spark'));
+  ctx.clearRect(0, 0, W, H);
+  if (decodeTimes.length < 2) return;
+  const max = Math.max(1, ...decodeTimes);
+  ctx.strokeStyle = '#58a6ff'; ctx.beginPath();
+  decodeTimes.forEach((v, i) => {
+    const x = W * i / (decodeTimes.length - 1), y = H - 2 - (H - 4) * v / max;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+}
+
+function frame() { drawEmg(); drawHeat(); requestAnimationFrame(frame); }
+connect();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

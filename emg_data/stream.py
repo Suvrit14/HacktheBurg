@@ -115,7 +115,8 @@ def stream_windows(emg, model, labels=None, window_length=50, step_size=25, samp
     #   probabilities  {gesture: probability} for every class the model knows
     #   true_label     the most common label inside the window if labels were given, otherwise None
     #   index          number of the window, starting at 0
-    classes = [int(c) for c in model.classes_]
+    #   decode_ms      how long the features + prediction took for this window (milliseconds)
+    classes =[int(c) for c in model.classes_]
     num_windows = ((len(emg) - window_length) // step_size) + 1
     if num_windows < 1:
         raise ValueError("the recording is shorter than one window")
@@ -134,9 +135,11 @@ def stream_windows(emg, model, labels=None, window_length=50, step_size=25, samp
             if wait > 0:
                 time.sleep(wait)
 
+        decode_start = time.perf_counter()
         features = extract_features(window[np.newaxis, :, :])      # (1, 48)
         probabilities = model.predict_proba(features)[0]           # one probability per class
         best = int(np.argmax(probabilities))
+        decode_ms = (time.perf_counter() - decode_start) * 1000    # features + prediction for this window
 
         true_label = None
         if labels is not None:
@@ -150,4 +153,5 @@ def stream_windows(emg, model, labels=None, window_length=50, step_size=25, samp
             "probabilities": {classes[k]: float(probabilities[k]) for k in range(len(classes))},
             "true_label": true_label,
             "index": i,
+            "decode_ms": decode_ms,
         }

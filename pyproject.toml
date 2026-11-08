@@ -26,6 +26,7 @@ dependencies = [
     "scikit-learn==1.7.2",
     "scipy>=1.18.1",
     "uvicorn[standard]>=0.54.0",
+    "websockets>=17",
 ]
 
 [project.scripts]

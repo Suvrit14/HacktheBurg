@@ -161,6 +161,13 @@ def back(page: Page) -> str:
         pass
     if page.url == url:
         return "no previous page"
+    if page.url == "about:blank":
+        # The blank page a new tab starts on is not a real previous page: stay on the site.
+        try:
+            page.go_forward(wait_until="commit", timeout=NAV_TIMEOUT_MS)
+        except PlaywrightTimeoutError:
+            pass
+        return "no previous page"
     return f"went back to {page.url}"
 
 
