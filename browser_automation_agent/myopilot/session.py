@@ -1,4 +1,4 @@
-"""Switch-access controller: turns scroll_down/scroll_up/forward/back into menus, tasks and answers.
+"""Switch-access controller: turns scroll_down/scroll_up/tab/click/back into menus, tasks and answers.
 
 Screens (the `mode` sent to the panel):
   home     everyday tasks to start from
@@ -63,11 +63,11 @@ class Session:
         await self.publish(mode=mode, title=title, items=labels, cursor=cursor, **extra)
         while True:
             intent = await self.bus.next()
-            if intent is Intent.SCROLL_DOWN:
+            if intent in (Intent.SCROLL_DOWN, Intent.TAB):
                 cursor = (cursor + 1) % len(labels)
             elif intent is Intent.SCROLL_UP:
                 cursor = (cursor - 1) % len(labels)
-            elif intent is Intent.FORWARD:
+            elif intent is Intent.CLICK:
                 self.log.emit("choice", mode=mode, title=title, index=cursor, label=labels[cursor])
                 return cursor
             elif intent is Intent.BACK:

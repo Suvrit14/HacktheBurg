@@ -25,7 +25,7 @@ def create_app(session: Any, bus: IntentBus) -> FastAPI:
 
     @app.post("/intent/{name}")
     async def post_intent(name: str) -> dict[str, str]:
-        """HTTP hook for other gesture sources: scroll_down / scroll_up / forward / back."""
+        """HTTP hook for other gesture sources: scroll_down / scroll_up / tab / click / back."""
         try:
             intent = bus.publish(name, source="http")
         except ValueError as exc:

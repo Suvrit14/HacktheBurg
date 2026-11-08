@@ -1,6 +1,6 @@
 # MyoPilot
 
-An AI browser agent for people with limited hand movement. Four gesture commands (scroll_down, scroll_up, forward, back), the same ones Suvrit's classifier emits, drive an agent that completes everyday tasks on **live websites** such as NHS and GOV.UK. Muscle (EMG) gestures come from the classifier (`uv run main.py --emg`); the keyboard works as a stand-in.
+An AI browser agent for people with limited hand movement. Five gesture commands (scroll_down, scroll_up, tab, click, back), the same ones Suvrit's classifier emits, drive an agent that completes everyday tasks on **live websites** such as NHS and GOV.UK. Muscle (EMG) gestures come from the classifier (`uv run main.py --emg`); the keyboard works as a stand-in.
 
 Built with **LangGraph** and **AWS Bedrock**, with **Playwright** driving Google Chrome.
 
@@ -27,10 +27,10 @@ PYTHONPATH=browser_automation_agent uv run python -m myopilot.cli_task "find a p
 PYTHONPATH=browser_automation_agent uv run python -m myopilot.cli_task "book community transport for a hospital appointment" \
   --start-url http://localhost:8765/mock/transport --serve-mock --headed
 ```
-Panel keys: ↓/→ scroll_down · ↑/← scroll_up · Enter forward · Esc back · V voice (in text questions).
+Panel keys: ↓/→ scroll_down · ↑/← scroll_up · Tab tab · Enter click · Esc back · V voice (in text questions).
 
 ## How it works
-- **Switch access:** the home screen lists everyday tasks. On any other page the LLM proposes 3–4 next actions. One `forward` starts a multi-step task.
+- **Switch access:** the home screen lists everyday tasks. On any other page the LLM proposes 3–4 next actions. One `click` starts a multi-step task.
 - **Typing in layers:**
   1. Fill fields from the saved profile (`profiles/demo_user.json`, a fictional persona).
   2. Turn questions into choices (`ask_choice`).
@@ -57,7 +57,7 @@ uv run browser_automation_agent/tests/walk_mock_form.py       # demo form + brow
 | `myopilot/browser.py`, `snapshot.js` | Playwright wrapper and token-lean page snapshot |
 | `myopilot/tools.py` | Tool schemas the LLM sees |
 | `myopilot/options.py` | Home tasks and per-page option proposals |
-| `myopilot/intents.py` | Command bus (scroll_down / scroll_up / forward / back) |
+| `myopilot/intents.py` | Command bus (scroll_down / scroll_up / tab / click / back) |
 | `myopilot/emg_source.py` | Suvrit's EMG classifier as a command source (`--emg`) |
 | `myopilot/panel/` | Control panel (FastAPI + WebSocket) |
 | `myopilot/mock_site.py` | Local demo form for the full submit path |

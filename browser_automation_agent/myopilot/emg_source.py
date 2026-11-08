@@ -31,11 +31,13 @@ if str(REPO_ROOT) not in sys.path:  # emg_data lives at the repo root
 
 from emg_data.commands import COMMAND_FOR_GESTURE  # noqa: E402
 from emg_data.interface import replay_commands  # noqa: E402
+from emg_data.model import CLASSES  # noqa: E402
 from emg_data.stream import gestures_in_recording_order  # noqa: E402
 
 SUBJECT = settings.emg_subject  # EMG_SUBJECT in the root .env (shared with m1.ipynb)
 MODEL_PATH = REPO_ROOT / "models" / f"subject{SUBJECT}_set_a.joblib"
-DATA_DIR = REPO_ROOT / "data"
+# Recordings live in s1 ... s10 at the repo root (Suvrit's layout) or in data/s1 ... data/s10.
+DATA_DIR = REPO_ROOT if (REPO_ROOT / f"s{SUBJECT}").is_dir() else REPO_ROOT / "data"
 DATA_FILE = DATA_DIR / f"s{SUBJECT}" / f"S{SUBJECT}_E2_A1.mat"
 TRAIN_REPS = [1, 2, 3, 4, 5]  # same as m1.ipynb T2: repetition 6 is held out for the replay
 HELD_OUT_REP = 6
@@ -50,14 +52,20 @@ def ensure_model(log: EventLog | None = None) -> Path:
     if not DATA_FILE.exists():
         have = sorted(p.name for p in DATA_DIR.glob("s*") if p.is_dir()) if DATA_DIR.exists() else []
         raise EMGSetupError(f"EMG_SUBJECT={SUBJECT}: recording {DATA_FILE.relative_to(REPO_ROOT)} not found "
-                            f"(subjects in data/: {', '.join(have) or 'none'}).")
+                            f"(subjects found: {', '.join(have) or 'none'}).")
     if MODEL_PATH.exists():
+        import sklearn
         from emg_data.model import load_model
-        saved_subject = load_model(str(MODEL_PATH)).get("subject")
-        if saved_subject == SUBJECT:
+        try:
+            saved = load_model(str(MODEL_PATH))
+        except Exception:  # noqa: BLE001 - a model pickled by another scikit-learn may not load at all
+            saved = {}
+        # Reuse it only if it is for this subject and was saved with the scikit-learn we have now.
+        if saved.get("subject") == SUBJECT and saved.get("sklearn_version") == sklearn.__version__:
             return MODEL_PATH
         if log:
-            log.emit("emg_model_mismatch", path=str(MODEL_PATH.relative_to(REPO_ROOT)), saved_subject=saved_subject)
+            log.emit("emg_model_mismatch", path=str(MODEL_PATH.relative_to(REPO_ROOT)),
+                     saved_subject=saved.get("subject"), saved_sklearn=saved.get("sklearn_version"))
     from emg_data.emg import extract_features, load_db5
     from emg_data.model import GESTURES, save_model, train_model
 
@@ -71,19 +79,22 @@ def ensure_model(log: EventLog | None = None) -> Path:
         log.emit("emg_model_trained", subject=SUBJECT, path=str(MODEL_PATH.relative_to(REPO_ROOT)))
     return MODEL_PATH
 
-GESTURE_FOR_COMMAND: dict[str, int] = {cmd: g for g, cmd in COMMAND_FOR_GESTURE.items()}
+# Gestures our (set A) model can decode. Suvrit's "tab" gesture (2) needs his set-C model, so for now
+# tab comes from the panel / keyboard only.
+EMG_GESTURES = [g for g in COMMAND_FOR_GESTURE if g in CLASSES]
+GESTURE_FOR_COMMAND: dict[str, int] = {COMMAND_FOR_GESTURE[g]: g for g in EMG_GESTURES}
 GESTURE_NAMES = {"fist": 6, "spread": 5, "radial": 15, "ulnar": 16}
 # Screens where the user is expected to make a gesture.
 WAITING_MODES = {"home", "browse", "result", "ask", "confirm", "text"}
 
 def recording_sequence() -> list[str]:
     """The model's gestures as commands, in the order they appear in the subject's recording."""
-    order = gestures_in_recording_order(SUBJECT, 2, list(COMMAND_FOR_GESTURE), HELD_OUT_REP, str(DATA_DIR))
+    order = gestures_in_recording_order(SUBJECT, 2, EMG_GESTURES, HELD_OUT_REP, str(DATA_DIR))
     return [COMMAND_FOR_GESTURE[g] for g in order]
 
 
 def parse_sequence(text: str | None) -> list[str]:
-    """'scroll_down,forward' (commands) or 'fist,ulnar' (gestures) -> command names.
+    """'scroll_down,click' (commands) or 'fist,ulnar' (gestures) -> command names.
     No sequence given: the gestures in the order they appear in the recording."""
     if not text:
         return recording_sequence()

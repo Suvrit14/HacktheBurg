@@ -34,7 +34,7 @@ async def main() -> int:
     p.add_argument("--emg", action="store_true",
                    help="drive the menus with Suvrit's EMG classifier (replayed held-out recording)")
     p.add_argument("--emg-sequence", default=None,
-                   help="gestures to perform, e.g. 'scroll_down,forward' (commands) or 'fist,ulnar' (gestures) "
+                   help="gestures to perform, e.g. 'scroll_down,click' (commands) or 'fist,ulnar' (gestures) "
                         "(default: the model's gestures in the order they appear in the recording)")
     p.add_argument("--emg-speed", type=float, default=1.0, help="replay speed, 1.0 = real time")
     p.add_argument("--emg-repeat", action="store_true",

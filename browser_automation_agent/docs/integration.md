@@ -10,7 +10,8 @@ The automation uses **the same four commands as Suvrit's classifier** (`emg_data
 |---------------|---------------------------------|----------------------------|
 | `scroll_down` | fist (6)                        | move the highlight down    |
 | `scroll_up`   | abduction of all fingers (5)    | move the highlight up      |
-| `forward`     | wrist ulnar deviation (16)      | choose / approve           |
+| `click`       | wrist ulnar deviation (16)      | choose / approve           |
+| `tab`         | index + middle extension (2)    | next option (needs Suvrit's set-C model for EMG; panel/keyboard for now) |
 | `back`        | wrist radial deviation (15)     | cancel / go back / reject  |
 
 Rest produces no command. Smoothing (majority vote, confidence threshold 0.9, cooldown) happens in Suvrit's `CommandLogic`.
@@ -18,7 +19,7 @@ Rest produces no command. Smoothing (majority vote, confidence threshold 0.9, co
 ### Running it with Suvrit's classifier
 ```bash
 uv run main.py --emg                                   # the model's gestures in the order they appear in the recording
-uv run main.py --emg --emg-sequence forward,forward    # also accepts gesture names: fist/spread/radial/ulnar
+uv run main.py --emg --emg-sequence click,click    # also accepts gesture names: fist/spread/radial/ulnar
 ```
 `myopilot/emg_source.py` replays a real recorded piece (rest, then the gesture) for each gesture in the sequence. It uses the held-out repetition 6, through `emg_data.interface.replay_commands()`, in real time. Each gesture is performed only when a menu is waiting for input.
 
@@ -29,7 +30,7 @@ uv run main.py --emg --emg-sequence forward,forward    # also accepts gesture na
 ### Other ways to send a command
 1. **Same Python process:** `bus.publish("scroll_down", source="emg")`.
 2. **HTTP** from any process: `POST http://localhost:8765/intent/scroll_down`.
-3. **WebSocket** `ws://localhost:8765/ws`: send `{"intent": "forward", "source": "emg"}`.
+3. **WebSocket** `ws://localhost:8765/ws`: send `{"intent": "click", "source": "emg"}`.
 
 Commands that arrive while the agent is busy working are dropped on purpose, so a stray gesture can't trigger a surprise action.
 
@@ -41,7 +42,7 @@ Common fields: `type`, `t` (seconds since start), `ts` (ISO time).
 
 | type | Key fields |
 |---|---|
-| `intent` | `intent` (`scroll_down` / `scroll_up` / `forward` / `back`), `source` (keyboard / emg / http) |
+| `intent` | `intent` (`scroll_down` / `scroll_up` / `tab` / `click` / `back`), `source` (keyboard / emg / http) |
 | `emg_command` | `command`, `gesture`, `confidence`, `replay_t`, `intended` |
 | `emg_gesture_start` / `emg_gesture_end` | `step`, `intended`; at the end: `decoded`, `forwarded`, `suppressed_repeats`, `ok` |
 | `choice` | `mode`, `title`, `index`, `label` (`back` if cancelled) |

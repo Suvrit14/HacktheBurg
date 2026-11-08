@@ -26,7 +26,7 @@
   .working { display:flex; align-items:center; gap:14px; font-size:20px; color:var(--muted); }
   .spin { width:26px; height:26px; border:4px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:s 0.9s linear infinite; }
   @keyframes s { to { transform:rotate(360deg); } }
-  .pad { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:22px; }
+  .pad { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:22px; }
   .pad button { font:600 14px system-ui; padding:12px 6px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); cursor:pointer; }
   .pad button.flash { background:var(--accent); color:#fff; }
   .voice { margin-top:12px; display:flex; gap:8px; }
@@ -49,9 +49,9 @@
     <div id="main"></div>
     <div class="pad" aria-label="Gesture controls">
       <button data-i="scroll_up">▲ scroll_up</button><button data-i="scroll_down">▼ scroll_down</button>
-      <button data-i="forward">● forward</button><button data-i="back">↩ back</button>
+      <button data-i="tab">⇥ tab</button><button data-i="click">● click</button><button data-i="back">↩ back</button>
     </div>
-    <p class="hint">Keyboard stand-in for gestures: ↑/← scroll_up · ↓/→ scroll_down · Enter forward · Esc back · V voice</p>
+    <p class="hint">Keyboard stand-in for gestures: ↑/← scroll_up · ↓/→ scroll_down · Tab tab · Enter click · Esc back · V voice</p>
   </section>
   <section class="panel">
     <div class="metrics" id="metrics"></div>
@@ -131,7 +131,7 @@ function addEvent(e) {
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT') return;
   const map = {ArrowDown: 'scroll_down', ArrowRight: 'scroll_down', ArrowUp: 'scroll_up', ArrowLeft: 'scroll_up',
-               Enter: 'forward', Escape: 'back'};
+               Tab: 'tab', Enter: 'click', Escape: 'back'};
   if (map[e.key]) { e.preventDefault(); intent(map[e.key]); }
   else if ((e.key === 'v' || e.key === 'V') && view.mode === 'text') { e.preventDefault(); dictate(); }
 });

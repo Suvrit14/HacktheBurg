@@ -12,7 +12,7 @@ from .emg import extract_features, load_raw_db5
 from .model import CLASSES
 
 
-def build_replay(subject_number=1, exercise_number=2, gestures=None, replay_rep=6, data_dir="data"):
+def build_replay(subject_number=1, exercise_number=2, gestures=None, replay_rep=6, data_dir="."):
     # For each gesture: the real rest just before it, then the gesture itself, both from repetition replay_rep.
     # The pieces are joined in the order they appear in the RECORDING (not in the order of the list),
     # so the replay plays the data exactly in its original sequence. gestures=None uses the model's gestures
@@ -81,13 +81,13 @@ def recording_order(restimulus, rerepetition, gestures=None, replay_rep=6):
     return sorted((int(g) for g in gestures), key=lambda g: first_sample[g])
 
 
-def gestures_in_recording_order(subject_number=1, exercise_number=2, gestures=None, replay_rep=6, data_dir="data"):
+def gestures_in_recording_order(subject_number=1, exercise_number=2, gestures=None, replay_rep=6, data_dir="."):
     # Same as recording_order, but reads the recording file itself.
     _, restimulus, rerepetition, _ = load_raw_db5(subject_number, exercise_number, data_dir)
     return recording_order(restimulus, rerepetition, gestures, replay_rep)
 
 
-def build_rest_replay(subject_number=1, exercise_number=2, replay_rep=6, data_dir="data"):
+def build_rest_replay(subject_number=1, exercise_number=2, replay_rep=6, data_dir="."):
     # All the rest of one repetition, from the rest periods before every one of the 17 movements, joined together.
     # No gesture is in it, so every command that fires while it plays is a false trigger.
     # Returns the same kind of dict as build_replay (without segments).

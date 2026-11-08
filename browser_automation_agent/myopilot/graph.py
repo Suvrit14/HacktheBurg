@@ -37,7 +37,7 @@ from .tools import ALL_TOOLS, BROWSER_TOOLS, HUMAN_TOOLS
 SNAPSHOT_ELEMENTS = 150
 
 SYSTEM_PROMPT = """You are MyoPilot, a web assistant acting for a person with limited hand movement.
-They control you with four gestures (scroll_down, scroll_up, forward, back) and cannot type. You operate a real
+They control you with five gestures (scroll_down, scroll_up, tab, click, back) and cannot type. You operate a real
 web browser for them on live websites and complete everyday tasks end to end.
 
 HOW YOU SEE THE PAGE
@@ -227,7 +227,7 @@ class TaskAgent:
                 content = "User cancelled." if not reply or reply == "back" else f"User said: {reply}"
             else:  # confirm
                 reply = interrupt({"kind": "confirm", "question": args.get("summary", "")})
-                approved = reply is True or str(reply).upper() in ("APPROVED", "YES", "FORWARD")
+                approved = reply is True or str(reply).upper() in ("APPROVED", "YES", "CLICK")
                 if approved:
                     self.guard.submit_approved = True
                 content = "APPROVED" if approved else "REJECTED by the user. Do not submit."

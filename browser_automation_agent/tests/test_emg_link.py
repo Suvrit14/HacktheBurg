@@ -13,14 +13,14 @@ def test_our_commands_are_exactly_suvrits():
 
 
 @pytest.mark.parametrize("name,intent", [
-    ("scroll_down", Intent.SCROLL_DOWN), ("scroll_up", Intent.SCROLL_UP), ("forward", Intent.FORWARD),
-    ("back", Intent.BACK), ("FORWARD", Intent.FORWARD), (Intent.BACK, Intent.BACK),
+    ("scroll_down", Intent.SCROLL_DOWN), ("scroll_up", Intent.SCROLL_UP), ("click", Intent.CLICK),
+    ("tab", Intent.TAB), ("back", Intent.BACK), ("CLICK", Intent.CLICK), (Intent.BACK, Intent.BACK),
 ])
 def test_commands_parse(name, intent):
     assert to_intent(name) is intent
 
 
-@pytest.mark.parametrize("name", ["jump", "NEXT", "SELECT"])
+@pytest.mark.parametrize("name", ["jump", "NEXT", "SELECT", "forward"])
 def test_unknown_or_old_command_rejected(name):
     with pytest.raises(ValueError):
         to_intent(name)
@@ -28,8 +28,8 @@ def test_unknown_or_old_command_rejected(name):
 
 def test_parse_sequence_accepts_commands_and_gesture_names():
     from myopilot.emg_source import parse_sequence
-    assert parse_sequence("fist, ulnar") == ["scroll_down", "forward"]
-    assert parse_sequence("scroll_down,forward,back") == ["scroll_down", "forward", "back"]
+    assert parse_sequence("fist, ulnar") == ["scroll_down", "click"]
+    assert parse_sequence("scroll_down,click,back") == ["scroll_down", "click", "back"]
     assert parse_sequence("scroll_up") == ["scroll_up"]
     with pytest.raises(ValueError):
         parse_sequence("wave")
@@ -38,14 +38,15 @@ def test_parse_sequence_accepts_commands_and_gesture_names():
 from myopilot.config import settings  # noqa: E402
 
 _S = settings.emg_subject
-needs_data = pytest.mark.skipif(not (REPO_ROOT / "data" / f"s{_S}" / f"S{_S}_E2_A1.mat").exists(),
+from myopilot.emg_source import DATA_FILE  # noqa: E402
+needs_data = pytest.mark.skipif(not DATA_FILE.exists(),
                                 reason=f"NinaPro DB5 recording for subject {_S} not present")
 
 
 @pytest.fixture(autouse=True, scope="module")
 def _model_for_subject():
     """Train models/subject<N>_set_a.joblib for EMG_SUBJECT if it is missing (same as main.py --emg)."""
-    if (REPO_ROOT / "data" / f"s{_S}" / f"S{_S}_E2_A1.mat").exists():
+    if DATA_FILE.exists():
         from myopilot.emg_source import ensure_model
         ensure_model()
 
@@ -57,10 +58,10 @@ def test_default_sequence_follows_the_recording():
     from emg_data.commands import COMMAND_FOR_GESTURE
     from emg_data.emg import load_raw_db5
     from emg_data.stream import build_replay
-    from myopilot.emg_source import DATA_DIR, parse_sequence
+    from myopilot.emg_source import DATA_DIR, EMG_GESTURES, parse_sequence
 
     _, restim, rerep, _ = load_raw_db5(_S, 2, str(DATA_DIR))
-    first = {g: np.flatnonzero((restim == g) & (rerep == 6))[0] for g in COMMAND_FOR_GESTURE}
+    first = {g: np.flatnonzero((restim == g) & (rerep == 6))[0] for g in EMG_GESTURES}
     expected = sorted(first, key=first.get)
     replay = build_replay(_S, 2, gestures=[16, 15, 6, 5], replay_rep=6, data_dir=str(DATA_DIR))  # list order ignored
     assert [s["gesture"] for s in replay["segments"]] == expected
@@ -108,7 +109,7 @@ def test_held_fist_forwards_one_scroll_down_unless_repeat(repeat, expected_forwa
 
 @needs_data
 @pytest.mark.parametrize("command,intent", [("scroll_up", Intent.SCROLL_UP), ("back", Intent.BACK),
-                                            ("forward", Intent.FORWARD)])
+                                            ("click", Intent.CLICK)])
 def test_each_recorded_gesture_decodes_to_its_command(command, intent):
     from myopilot.emg_source import EMGReplaySource
 

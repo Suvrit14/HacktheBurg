@@ -1,4 +1,4 @@
-"""The four commands that drive MyoPilot, and where they come from.
+"""The five commands that drive MyoPilot, and where they come from.
 
 The commands are exactly the ones Suvrit's EMG command logic emits
 (emg_data/commands.py), so there is no translation between the two pipelines:
@@ -6,7 +6,8 @@ The commands are exactly the ones Suvrit's EMG command logic emits
     command       gesture (NinaPro DB5 E2)      what it does in a menu
     scroll_down   fist (6)                      move the highlight down
     scroll_up     spread fingers (5)            move the highlight up
-    forward       wrist ulnar deviation (16)    choose the highlighted option / approve
+    tab           index + middle extension (2)  move the highlight to the next option
+    click         wrist ulnar deviation (16)    choose the highlighted option / approve
     back          wrist radial deviation (15)   cancel / go back
 
 Sources: the keyboard / buttons in the control panel, and Suvrit's classifier
@@ -21,7 +22,8 @@ from enum import Enum
 class Intent(str, Enum):
     SCROLL_DOWN = "scroll_down"  # move the highlight down
     SCROLL_UP = "scroll_up"      # move the highlight up
-    FORWARD = "forward"          # choose the highlighted option / approve
+    TAB = "tab"                  # move the highlight to the next option
+    CLICK = "click"              # choose the highlighted option / approve
     BACK = "back"                # cancel / go back
 
 
@@ -29,7 +31,7 @@ COMMANDS = [i.value for i in Intent]
 
 
 def to_intent(name: Intent | str) -> Intent:
-    """'scroll_down' / 'scroll_up' / 'forward' / 'back' (any case) -> Intent."""
+    """'scroll_down' / 'scroll_up' / 'tab' / 'click' / 'back' (any case) -> Intent."""
     if isinstance(name, Intent):
         return name
     try:
