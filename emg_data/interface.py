@@ -8,15 +8,17 @@ from .commands import CommandLogic, TUNED_CONFIG
 from .model import load_model
 from .stream import build_replay, stream_windows
 
-DEMO_ORDER = [6, 5, 15, 16]      # fist, spread fingers, radial deviation, ulnar deviation
 COMMANDS = ["scroll_down", "scroll_up", "back", "forward"]
 
 
 def replay_commands(model_path="models/subject1_set_a.joblib", subject_number=1, replay_rep=6,
-                    gestures=DEMO_ORDER, speed=1.0, config=None, data_dir="data", allow_training_data=False):
+                    gestures=None, speed=1.0, config=None, data_dir="data", allow_training_data=False):
     # Replays real recorded pieces (rest + gesture, from one repetition) as if they came from a sensor and
     # yields one dict per window: the window dict of stream_windows plus the key "event"
     # (the command that fired on this window, or None).
+    #
+    # The pieces play in the order they appear in the recording. gestures=None replays every gesture
+    # the saved model knows; a list picks which ones (their order in the list does not matter).
     #
     # speed=1.0 is real time (one window every 125 ms), speed=None runs as fast as possible.
     # The replay has to be a repetition the model was NOT trained on, otherwise the results would look better
@@ -29,6 +31,8 @@ def replay_commands(model_path="models/subject1_set_a.joblib", subject_number=1,
         raise ValueError(f"the model was trained on repetition {replay_rep}; replay repetition "
                          f"{saved['held_out_rep']} or set allow_training_data=True")
 
+    if gestures is None:
+        gestures = [c for c in saved["classes"] if c != 0]
     replay = build_replay(subject_number, saved["exercise"], gestures, replay_rep, data_dir)
     logic = CommandLogic(TUNED_CONFIG if config is None else config)
 

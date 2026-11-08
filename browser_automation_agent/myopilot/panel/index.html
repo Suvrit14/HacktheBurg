@@ -48,10 +48,10 @@
     <div class="brand"><b>Myo<span>Pilot</span></b><span class="mode" id="mode">connecting…</span></div>
     <div id="main"></div>
     <div class="pad" aria-label="Gesture controls">
-      <button data-i="PREV">◀ PREV</button><button data-i="NEXT">NEXT ▶</button>
-      <button data-i="SELECT">● SELECT</button><button data-i="BACK">↩ BACK</button>
+      <button data-i="scroll_up">▲ scroll_up</button><button data-i="scroll_down">▼ scroll_down</button>
+      <button data-i="forward">● forward</button><button data-i="back">↩ back</button>
     </div>
-    <p class="hint">Keyboard stand-in for gestures: ←/↑ PREV · →/↓ NEXT · Enter SELECT · Esc BACK · V voice</p>
+    <p class="hint">Keyboard stand-in for gestures: ↑/← scroll_up · ↓/→ scroll_down · Enter forward · Esc back · V voice</p>
   </section>
   <section class="panel">
     <div class="metrics" id="metrics"></div>
@@ -114,10 +114,13 @@ function dictate() {
 
 function addEvent(e) {
   const label = {agent_step: e.tool, llm_call: e.purpose === 'options' ? 'options' : 'think', choice: 'choice',
-    ask: 'ask', answer: 'answer', result: 'result', safety_block: 'BLOCKED', intent: 'gesture', task_start: 'task'}[e.type] || e.type;
+    ask: 'ask', answer: 'answer', result: 'result', safety_block: 'BLOCKED', intent: 'gesture', task_start: 'task',
+    emg_command: 'EMG', emg_gesture_end: 'EMG done'}[e.type] || e.type;
   const detail = e.type === 'agent_step' ? (e.explain || '') + (e.ok === false ? ` – ${e.error}` : '')
     : e.type === 'llm_call' ? `${e.input_tokens ?? 0}→${e.output_tokens ?? 0} tok · ${e.latency_s}s`
     : e.type === 'intent' ? `${e.intent} (${e.source})`
+    : e.type === 'emg_command' ? `${e.command} · gesture ${e.gesture} · confidence ${e.confidence}`
+    : e.type === 'emg_gesture_end' ? `intended ${e.intended}, decoded ${(e.decoded || []).join(', ') || 'nothing'}${e.suppressed_repeats ? ` (${e.suppressed_repeats} repeats held back)` : ''}`
     : e.question || e.label || e.reply || e.answer || e.reason || '';
   const row = document.createElement('div');
   row.className = `ev ${e.ok === false || e.type === 'safety_block' ? 'bad' : ''} ${e.type === 'llm_call' ? 'llm' : ''}`;
@@ -127,7 +130,8 @@ function addEvent(e) {
 
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT') return;
-  const map = {ArrowRight: 'NEXT', ArrowDown: 'NEXT', ArrowLeft: 'PREV', ArrowUp: 'PREV', Enter: 'SELECT', Escape: 'BACK'};
+  const map = {ArrowDown: 'scroll_down', ArrowRight: 'scroll_down', ArrowUp: 'scroll_up', ArrowLeft: 'scroll_up',
+               Enter: 'forward', Escape: 'back'};
   if (map[e.key]) { e.preventDefault(); intent(map[e.key]); }
   else if ((e.key === 'v' || e.key === 'V') && view.mode === 'text') { e.preventDefault(); dictate(); }
 });

@@ -1,6 +1,9 @@
 """Integration check (no LLM): walk the local demo form with the real browser layer
 and SafetyGuard, including a validation error and the approve-then-submit rule."""
-import asyncio, re
+import asyncio, re, sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # browser_automation_agent/
 
 import uvicorn
 from fastapi import FastAPI

@@ -6,7 +6,7 @@
     --fake   use the scripted stand-in model (no AWS needed) to test the pipeline.
 
 When the agent asks something, answer in the terminal (keyboard stand-in for gestures):
-choices by number, 'b' for BACK, confirm with y/n, free text by typing.
+choices by number, 'b' for back, confirm with y/n, free text by typing.
 """
 from __future__ import annotations
 
@@ -35,15 +35,15 @@ async def terminal_interrupt(payload: dict[str, Any]) -> Any:
         for i, o in enumerate(opts, 1):
             print(f"    {i}. {o}")
         while True:
-            a = (await read("    pick number (b = BACK): ")).strip().lower()
+            a = (await read("    pick number (b = back): ")).strip().lower()
             if a == "b":
-                return "BACK"
+                return "back"
             if a.isdigit() and 1 <= int(a) <= len(opts):
                 return opts[int(a) - 1]
     if kind == "confirm":
         a = (await read("    approve? [y/n]: ")).strip().lower()
         return "APPROVED" if a.startswith("y") else "REJECTED"
-    return (await read("    your answer (voice stand-in): ")).strip() or "BACK"
+    return (await read("    your answer (voice stand-in): ")).strip() or "back"
 
 
 async def main() -> int:
@@ -82,10 +82,10 @@ async def main() -> int:
             if kind == "confirm":
                 reply = "APPROVED" if args.auto_approve else "REJECTED"
             elif kind == "text":
-                reply = args.auto_text or "BACK"
+                reply = args.auto_text or "back"
             else:  # choice: next canned number (default: first option)
                 pick = canned.pop(0) if canned else "1"
-                opts = payload.get("options") or ["BACK"]
+                opts = payload.get("options") or ["back"]
                 reply = opts[min(int(pick), len(opts)) - 1] if pick.isdigit() else pick
             print(f">>> auto-answer [{kind}] {payload.get('question')!r} -> {reply!r}")
             return reply

@@ -7,8 +7,9 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-ROOT = Path(__file__).resolve().parent.parent
-load_dotenv(ROOT / ".env")
+ROOT = Path(__file__).resolve().parent.parent   # browser_automation_agent/ (profiles/, runs/)
+REPO_ROOT = ROOT.parent                          # repo root: the single .env for the whole project
+load_dotenv(REPO_ROOT / ".env")
 # An empty `AWS_PROFILE=` line in .env makes boto3 look for a profile named "" and fail.
 # Treat empty AWS variables as unset so the default credential chain is used.
 for _var in ("AWS_PROFILE", "AWS_DEFAULT_PROFILE", "AWS_REGION", "AWS_DEFAULT_REGION"):
@@ -47,6 +48,10 @@ class Settings:
     @property
     def browser_channel(self) -> str | None:
         return None if self.browser in ("", "chromium") else self.browser
+
+    # --- EMG (Suvrit's classifier): which NinaPro DB5 subject's model and recording to use.
+    # EMG_SUBJECT in the root .env is shared with the notebook (m1.ipynb). ---
+    emg_subject: int = field(default_factory=lambda: int(os.getenv("EMG_SUBJECT", "1")))
 
     # --- Agent behaviour ---
     max_steps: int = field(default_factory=lambda: int(os.getenv("MYOPILOT_MAX_STEPS", "40")))

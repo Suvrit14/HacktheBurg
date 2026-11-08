@@ -6,10 +6,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 
-from ..intents import Intent, IntentBus
+from ..intents import IntentBus
 from ..mock_site import router as mock_router
 
 INDEX = Path(__file__).with_name("index.html")
@@ -25,9 +25,12 @@ def create_app(session: Any, bus: IntentBus) -> FastAPI:
 
     @app.post("/intent/{name}")
     async def post_intent(name: str) -> dict[str, str]:
-        """HTTP hook for other gesture sources (e.g. the classifier process)."""
-        bus.publish(Intent(name.upper()), source="http")
-        return {"ok": name.upper()}
+        """HTTP hook for other gesture sources: scroll_down / scroll_up / forward / back."""
+        try:
+            intent = bus.publish(name, source="http")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {"ok": intent.value}
 
     @app.websocket("/ws")
     async def ws(sock: WebSocket) -> None:
@@ -42,7 +45,10 @@ def create_app(session: Any, bus: IntentBus) -> FastAPI:
             while True:
                 msg = json.loads(await sock.receive_text())
                 if "intent" in msg:
-                    bus.publish(Intent(msg["intent"]), source=msg.get("source", "keyboard"))
+                    try:
+                        bus.publish(msg["intent"], source=msg.get("source", "keyboard"))
+                    except ValueError:
+                        pass  # ignore unknown commands from a client
                 elif "text" in msg:
                     session.text_q.put_nowait(str(msg["text"]))
         except WebSocketDisconnect:
