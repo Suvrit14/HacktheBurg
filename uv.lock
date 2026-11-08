@@ -676,6 +676,7 @@ dependencies = [
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "uvicorn", extra = ["standard"] },
+    { name = "websockets" },
 ]
 
 [package.dev-dependencies]
@@ -703,6 +704,7 @@ requires-dist = [
     { name = "scikit-learn", specifier = "==1.7.2" },
     { name = "scipy", specifier = ">=1.18.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.54.0" },
+    { name = "websockets", specifier = ">=17" },
 ]
 
 [package.metadata.requires-dev]

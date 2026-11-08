@@ -29,7 +29,7 @@ PORT = 9333
 CDP_URL = f"http://127.0.0.1:{PORT}"
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 PROFILE_DIR = Path(tempfile.gettempdir()) / "myopilot-gesture-chrome"
-DEFAULT_URL = "https://en.wikipedia.org/wiki/Main_Page"
+DEFAULT_URL = "http://localhost:3000"
 
 
 def chrome_running() -> bool:

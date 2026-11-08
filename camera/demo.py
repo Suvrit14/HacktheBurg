@@ -2,6 +2,9 @@
 
     python -m camera.demo                       camera window; commands are printed
     python -m camera.demo --post http://localhost:8765     also send every command to the control panel (POST /intent/<command>)
+    python -m camera.demo --ws ws://localhost:8800         also send every command to the gesture server, which
+                                                           runs it with Playwright on the GOV.UK demo form
+                                                           (start it first: uv run gesture_control/server.py)
     python -m camera.demo --selftest            no camera: feed made-up hands through the whole chain and check the commands
     python -m camera.demo --check               guided check with your hand: how often is each pose recognised?
 
@@ -17,10 +20,43 @@ import sys
 import time
 import urllib.request
 
+import numpy as np
+
 from .pipeline import CameraPipeline
 from .poses import POSE_TO_GESTURE, NeutralCalibrator, PoseClassifier, PoseDebouncer
 
 MANUAL_KEYS = {"1": "fist", "2": "spread", "3": "v", "4": "radial", "5": "ulnar"}
+FRAME_EVERY_S = 1 / 12          # camera frames sent to the dashboard (--ws): about 12 per second
+FRAME_WIDTH = 480               # and scaled down to this width
+
+
+def send_camera(state, image, pose, status):
+    # One camera frame (with the hand drawn on it) and the current pose, for the live dashboard (--ws only)
+    link = state.get("link")
+    if link is None or not link.connected:
+        return
+    now = time.perf_counter()
+    if now - state.get("frame_sent_at", 0.0) < FRAME_EVERY_S:
+        return
+    state["frame_sent_at"] = now
+    import cv2
+    height, width = image.shape[:2]
+    if width > FRAME_WIDTH:
+        image = cv2.resize(image, (FRAME_WIDTH, int(height * FRAME_WIDTH / width)))
+    ok, jpeg = cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, 70])
+    if ok:
+        link.send_frame(jpeg.tobytes())
+    link.send_data({"type": "camera", "pose": pose, "status": status})
+
+
+def synthetic_frame(landmarks, lines):
+    # A drawn hand for --selftest, so the dashboard has a camera picture without a webcam
+    import numpy as np
+    from .capture import draw_overlay
+    canvas = np.full((360, 480, 3), 32, dtype=np.uint8)
+    points = np.asarray(landmarks, dtype=float)
+    points = (points - points.mean(axis=0)) * 110 + np.array([240, 200])
+    return draw_overlay(canvas, points, lines)
 
 
 def post_intent(base_url, command):
@@ -41,15 +77,67 @@ def make_pipeline(args, state):
         state["last_command"] = event["command"] + ("" if event["match"] else " (mismatch)")
         if args.post:
             post_intent(args.post, event["command"])
+        if state.get("link") is not None:
+            state["link"].send_command(event)
 
     def on_recording(kind, info):
         if kind == "start":
+            state["recording"] = dict(info)
             print(f"camera saw {info['camera_gesture']:7s} -> playing a recording of repetition {info['repetition']}")
         else:
             print(f"   recording finished: decoded {info['decoded_commands']}")
+        if state.get("link") is not None:
+            state["link"].send_data({"type": "recording", "kind": kind, **info})
 
-    return CameraPipeline(on_command=on_command, on_recording=on_recording, speed=args.speed,
-                          lead_in_s=args.lead_in, model_path=args.model, data_dir=args.data_dir)
+    def on_window(window):
+        # Every 125 ms window of the recording: the raw EMG and what the decoder made of it (dashboard only)
+        link = state.get("link")
+        if link is None or not link.connected:
+            return
+        raw = window["raw_window"]
+        recording = state.get("recording", {})
+        link.send_data({
+            "type": "window", "index": window["index"], "t": round(window["t"], 3),
+            "label": window["label"], "confidence": round(window["confidence"], 4),
+            "true_label": window["true_label"], "decode_ms": round(window.get("decode_ms", 0.0), 3),
+            "vote": window.get("vote"),
+            "command": (window["event"] or {}).get("command"),
+            "camera_gesture": recording.get("camera_gesture"),
+            "repetition": recording.get("repetition"),
+            "emg": raw.astype(int).tolist(),                                   # (50 samples, 16 channels)
+            "rms": [round(float(v), 2) for v in np.sqrt((raw.astype(float) ** 2).mean(axis=0))],
+        })
+
+    def send_meta():
+        # Sent on every (re)connection: which model and settings the decoder uses
+        from emg_data.commands import COMMAND_FOR_GESTURE
+        from emg_data.model import load_model
+        saved = state.setdefault("model_info", load_model(args.model))
+        state["link"].send_data({
+            "type": "meta", "model": args.model, "subject": saved.get("subject"),
+            "exercise": saved.get("exercise"), "classes": saved.get("classes"),
+            "commands": {str(g): c for g, c in COMMAND_FOR_GESTURE.items()},
+            "config": saved.get("config"), "sampling_freq": saved.get("sampling_freq"),
+            "window_length": saved.get("window_length"), "step_size": saved.get("step_size"),
+            "held_out_reps": saved.get("held_out_reps"),
+        })
+
+    pipeline = CameraPipeline(on_command=on_command, on_recording=on_recording, speed=args.speed,
+                              lead_in_s=args.lead_in, model_path=args.model, data_dir=args.data_dir,
+                              on_window=on_window if args.ws else None)
+    if args.ws:
+        from .browser_link import BrowserLink
+
+        def on_state(browser_state):
+            # While the browser is doing a command, new camera poses are ignored (no surprise actions)
+            pipeline.blocked = browser_state == "busy"
+            if browser_state == "busy":
+                print("   browser: busy -> camera poses paused")
+            elif browser_state == "ready":
+                print("   browser: ready -> camera poses armed")
+
+        state["link"] = BrowserLink(args.ws, on_state=on_state, on_connect=send_meta)
+    return pipeline
 
 
 def selftest(args):
@@ -64,13 +152,32 @@ def selftest(args):
     pipeline.on_command = lambda event: (commands.append(event["command"]), inner(event))
 
     expected = {"fist": "scroll_down", "spread": "scroll_up", "v": "tab", "radial": "back", "ulnar": "click"}
+    link = state.get("link")
+    if link is not None:
+        for _ in range(50):                     # give the link up to 5 s to connect
+            if link.state != "disconnected":
+                break
+            time.sleep(0.1)
+    def show(landmarks, name, status):
+        # With --ws: draw the made-up hand for the dashboard, at camera speed
+        if link is not None:
+            send_camera(state, synthetic_frame(landmarks, [f"selftest pose: {name}", status]), name, status)
+            time.sleep(FRAME_EVERY_S)
+
     for pose in expected:
         for frame in [make_pose("flat")] * 8 + [make_pose(pose)] * 10:
             name, _ = classifier.classify(frame)
+            show(frame, name, "ready")
             onset = debouncer.update(name)
             if onset is not None:
                 pipeline.trigger(onset)
+                while link is not None and pipeline.busy:
+                    show(frame, name, "recording playing")
                 pipeline.wait()
+                if link is not None:
+                    link.wait_ready()               # let the browser finish before the next pose
+    if link is not None:
+        link.close()
     ok = commands == list(expected.values())
     print("selftest:", "PASSED" if ok else f"FAILED, got {commands}")
     return 0 if ok else 1
@@ -116,7 +223,9 @@ def run_camera(args):
                 if calibrator.update(landmarks):
                     print(f"calibrated: your neutral tilt is {classifier.neutral_tilt_deg:+.1f} degrees. Ready.")
                 lines = ["Show a FLAT hand, fingers together, upright", f"calibrating {calibrator.progress} / {calibrator.frames_needed}"]
-                cv2.imshow("MyoPilot camera", draw_overlay(frame, landmarks, lines))
+                image = draw_overlay(frame, landmarks, lines)
+                cv2.imshow("MyoPilot camera", image)
+                send_camera(state, image, "calibrating", "calibrating")
                 if (cv2.waitKey(1) & 0xFF) == ord("q"):
                     break
                 continue
@@ -137,8 +246,12 @@ def run_camera(args):
                      "status: " + ("recording playing" if pipeline.busy else ("blocked" if pipeline.blocked else "ready"))
                      + ("   |   RELAX your hand to arm the next pose" if debouncer.fired else "   |   armed"),
                      f"last command: {state['last_command']}",
+                     *([f"browser: {state['link'].state}   {state['link'].last_reply}"] if state.get("link") else []),
                      f"{frames / (time.perf_counter() - started):.0f} fps    1-5 manual, n calibrate, q quit"]
-            cv2.imshow("MyoPilot camera", draw_overlay(frame, landmarks, lines))
+            image = draw_overlay(frame, landmarks, lines)
+            cv2.imshow("MyoPilot camera", image)
+            send_camera(state, image, pose, "recording playing" if pipeline.busy
+                        else ("blocked" if pipeline.blocked else "ready"))
 
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
@@ -150,6 +263,8 @@ def run_camera(args):
             if chr(key) in MANUAL_KEYS:
                 pipeline.trigger(MANUAL_KEYS[chr(key)])
     finally:
+        if state.get("link") is not None:
+            state["link"].close()
         tracker.close()
         capture.release()
         cv2.destroyAllWindows()
@@ -164,6 +279,7 @@ def main(argv=None):
     parser.add_argument("--height", type=int, default=480)
     parser.add_argument("--no-mirror", action="store_true", help="do not flip the picture like a mirror")
     parser.add_argument("--post", default="", help="control panel address, e.g. http://localhost:8765: send every command to POST /intent/<command>")
+    parser.add_argument("--ws", default="", help="gesture server, e.g. ws://localhost:8800: every command is run with Playwright on the open page")
     parser.add_argument("--speed", type=float, default=1.0, help="1.0 = recordings play in real time")
     parser.add_argument("--lead-in", type=float, default=0.4, help="seconds of rest played before a gesture")
     parser.add_argument("--stable-frames", type=int, default=5, help="frames a pose must be held before it counts")
@@ -179,7 +295,8 @@ def main(argv=None):
         from .check import check_with_camera
         return check_with_camera(args)
     if args.selftest:
-        args.speed = None if args.speed == 1.0 else args.speed        # as fast as possible unless a speed is given
+        if not args.ws:                                                # with --ws it plays in real time (a demo)
+            args.speed = None if args.speed == 1.0 else args.speed    # as fast as possible unless a speed is given
         return selftest(args)
     return run_camera(args)
 
