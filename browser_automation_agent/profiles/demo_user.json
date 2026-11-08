@@ -1,0 +1,24 @@
+{
+  "_note": "FICTIONAL demo persona. The address is a public building (the British Library). Never put real personal data here.",
+  "title": "Ms",
+  "first_name": "Alex",
+  "last_name": "Morgan",
+  "full_name": "Alex Morgan",
+  "date_of_birth": "1990-03-14",
+  "sex": "Female",
+  "email": "alex.morgan@example.com",
+  "mobile_phone": "07700 900123",
+  "address": {
+    "line1": "The British Library",
+    "line2": "96 Euston Road",
+    "town": "London",
+    "postcode": "NW1 2DB",
+    "country": "England"
+  },
+  "nationality": "British",
+  "nhs_number": null,
+  "national_insurance_number": null,
+  "preferred_contact": "email",
+  "accessibility_needs": "Has limited hand movement and uses gesture-based switch control. Prefers written communication by email.",
+  "interests": ["finding local health services", "train travel", "weather"]
+}
