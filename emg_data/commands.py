@@ -11,16 +11,17 @@ COMMAND_FOR_GESTURE = {
     6: "scroll_down",      # fist
     5: "scroll_up",        # abduction of all fingers
     15: "back",            # wrist radial deviation
-    16: "forward",         # wrist ulnar deviation
+    16: "click",         # wrist ulnar deviation
+    2: "tab",            # extension of index and middle, flexion of the others (only in the set-C model)
 }
 
-# These commands keep firing while the gesture is held. The others fire once per gesture.
+# These commands keep firing while the gesture is held. The others (back, click, tab) fire once per gesture.
 HOLD_TO_REPEAT = ["scroll_down", "scroll_up"]
 
 DEFAULT_CONFIG = {
     "vote_window": 5,          # majority vote over the last N windows (5 windows = about 0.6 s)
     "min_confidence": 0.6,     # a window with a lower confidence votes for nothing
-    "cooldown_s": 1.0,         # minimum time between two back/forward commands
+    "cooldown_s": 1.0,         # minimum time between two back/click commands
     "repeat_every_s": 0.3,     # scroll fires again every this many seconds while the gesture is held
 }
 
@@ -28,6 +29,10 @@ DEFAULT_CONFIG = {
 # The settings chosen in M1 T5 (tuned on repetitions 1 to 5 of Subject 1).
 # Only min_confidence differs from DEFAULT_CONFIG. The evidence for it is thin (see m1-progress.md).
 TUNED_CONFIG = dict(DEFAULT_CONFIG, min_confidence=0.9)
+
+# The settings chosen for the set-C model (rest + 4 gestures + tab, trained on repetitions 1 to 4),
+# tuned on repetitions 1 to 4 only. A much higher confidence threshold than TUNED_CONFIG, and slower (see next-steps-progress.md).
+TUNED_CONFIG_SET_C = dict(DEFAULT_CONFIG, vote_window=5, min_confidence=0.99)
 
 
 class CommandLogic:
@@ -39,9 +44,10 @@ class CommandLogic:
         self.votes = deque(maxlen=self.config["vote_window"])   # last N (vote, confidence) pairs
         self.state = None            # smoothed state: 0 = rest, a gesture id, or None = undecided
         self.current = 0             # the gesture the smoothed state last settled on
-        self.armed = True            # back/forward may only fire again after a return to rest
+        self.armed = True            # back/click may only fire again after a return to rest
         self.last_repeat = {}        # command -> time it last fired (for hold-to-repeat)
-        self.last_once = -1e9        # time the last back/forward command fired
+        self.last_once = -1e9        # time the last back/click command fired
+        self.vote = {"leading": None, "agree": 0, "of": 0, "needed": self.config["vote_window"] // 2 + 1, "state": None}
 
     def update(self, item):
         # item: one dict from stream_windows (needs t, label, confidence). Returns an event dict or None.
@@ -56,16 +62,21 @@ class CommandLogic:
         counts = Counter(v for v, c in self.votes if v is not None)
         needed = cfg["vote_window"] // 2 + 1
         self.state = None
+        leading = None
+        agree = 0
         if len(counts) > 0:
-            winner, count = counts.most_common(1)[0]
-            if count >= needed:
-                self.state = winner
+            leading, agree = counts.most_common(1)[0]
+            if agree >= needed:
+                self.state = leading
+
+        # For a dashboard: "agree of N windows vote for the leading gesture" (the gesture counts once agree >= needed)
+        self.vote = {"leading": leading, "agree": agree, "of": len(self.votes), "needed": needed, "state": self.state}
 
         # 3. Turn the smoothed state into a command
         event = None
 
         if self.state == 0:
-            # Rest: no command, and back/forward are allowed to fire again
+            # Rest: no command, and back/click are allowed to fire again
             self.armed = True
             self.current = 0
 
